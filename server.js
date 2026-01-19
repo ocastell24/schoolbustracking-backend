@@ -86,7 +86,7 @@ app.get('/', (req, res) => {
  app.use('/api/auth', require('./routes/auth'));
  app.use('/api/buses', require('./routes/buses'));
  app.use('/api/students', require('./routes/students'));
-// app.use('/api/gps', require('./routes/gps'));
+ app.use('/api/gps', require('./routes/gps'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
