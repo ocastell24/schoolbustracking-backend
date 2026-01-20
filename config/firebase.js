@@ -1,33 +1,17 @@
 // config/firebase.js
 const admin = require('firebase-admin');
+const getFirebaseCredentials = require('./firebase-credentials');
 
-console.log('🔍 Checking for Firebase credentials...');
-console.log('Environment:', process.env.NODE_ENV);
-console.log('Has GOOGLE_APPLICATION_CREDENTIALS_JSON?', !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+console.log('🔍 Initializing Firebase...');
 
 let serviceAccount;
-
-if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
-  console.log('✅ Found GOOGLE_APPLICATION_CREDENTIALS_JSON in environment');
-  try {
-    serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
-    console.log('✅ Successfully parsed Firebase credentials');
-    console.log('Project ID from credentials:', serviceAccount.project_id);
-  } catch (error) {
-    console.error('❌ Error parsing Firebase credentials:', error.message);
-    console.error('First 100 chars of JSON:', process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.substring(0, 100));
-    process.exit(1);
-  }
-} else {
-  console.log('⚠️ GOOGLE_APPLICATION_CREDENTIALS_JSON not found, trying local file...');
-  try {
-    serviceAccount = require('../firebase-credentials.json');
-    console.log('✅ Using Firebase credentials from local file');
-  } catch (error) {
-    console.error('❌ Firebase credentials file not found');
-    console.error('❌ Cannot start without Firebase credentials');
-    process.exit(1);
-  }
+try {
+  serviceAccount = getFirebaseCredentials();
+  console.log('✅ Firebase credentials loaded');
+  console.log('   Project ID:', serviceAccount.project_id);
+} catch (error) {
+  console.error('❌ Failed to load Firebase credentials:', error.message);
+  process.exit(1);
 }
 
 try {
