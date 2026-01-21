@@ -82,6 +82,22 @@ app.get('/', (req, res) => {
   });
 });
 
+// Debug: Verificar que rutas se cargan
+console.log('🔍 Loading routes...');
+
+try {
+  const authRoutes = require('./routes/auth');
+  console.log('✅ Auth routes loaded successfully');
+  console.log('   Auth routes:', Object.keys(authRoutes.stack || {}).length, 'routes');
+  app.use('/api/auth', authRoutes);
+} catch (error) {
+  console.error('❌ Error loading auth routes:', error.message);
+}
+
+app.use('/api/buses', require('./routes/buses'));
+app.use('/api/students', require('./routes/students'));
+app.use('/api/gps', require('./routes/gps'));
+
 // Routes (vamos a crearlas paso a paso)
  app.use('/api/auth', require('./routes/auth'));
  app.use('/api/buses', require('./routes/buses'));
