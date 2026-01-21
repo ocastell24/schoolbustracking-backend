@@ -88,21 +88,39 @@ console.log('🔍 Loading routes...');
 try {
   const authRoutes = require('./routes/auth');
   console.log('✅ Auth routes loaded successfully');
-  console.log('   Auth routes:', Object.keys(authRoutes.stack || {}).length, 'routes');
   app.use('/api/auth', authRoutes);
 } catch (error) {
   console.error('❌ Error loading auth routes:', error.message);
 }
 
-app.use('/api/buses', require('./routes/buses'));
-app.use('/api/students', require('./routes/students'));
-app.use('/api/gps', require('./routes/gps'));
+try {
+  app.use('/api/buses', require('./routes/buses'));
+  console.log('✅ Buses routes loaded');
+} catch (error) {
+  console.error('❌ Error loading buses routes:', error.message);
+}
+
+try {
+  app.use('/api/students', require('./routes/students'));
+  console.log('✅ Students routes loaded');
+} catch (error) {
+  console.error('❌ Error loading students routes:', error.message);
+}
+
+try {
+  app.use('/api/gps', require('./routes/gps'));
+  console.log('✅ GPS routes loaded');
+} catch (error) {
+  console.error('❌ Error loading GPS routes:', error.message);
+}
+
+console.log('✅ All routes loaded');
 
 // Routes (vamos a crearlas paso a paso)
- app.use('/api/auth', require('./routes/auth'));
- app.use('/api/buses', require('./routes/buses'));
- app.use('/api/students', require('./routes/students'));
- app.use('/api/gps', require('./routes/gps'));
+ //app.use('/api/auth', require('./routes/auth'));
+ //app.use('/api/buses', require('./routes/buses'));
+ //app.use('/api/students', require('./routes/students'));
+ //app.use('/api/gps', require('./routes/gps'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
