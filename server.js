@@ -88,6 +88,18 @@ console.log('🔍 Loading routes...');
 try {
   const authRoutes = require('./routes/auth');
   console.log('✅ Auth routes loaded successfully');
+  
+  // Debug: Ver qué rutas tiene
+  if (authRoutes.stack) {
+    console.log('   Routes in auth:');
+    authRoutes.stack.forEach(r => {
+      if (r.route) {
+        const methods = Object.keys(r.route.methods).join(',').toUpperCase();
+        console.log(`   - ${methods} ${r.route.path}`);
+      }
+    });
+  }
+  
   app.use('/api/auth', authRoutes);
 } catch (error) {
   console.error('❌ Error loading auth routes:', error.message);
