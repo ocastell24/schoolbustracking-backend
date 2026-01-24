@@ -136,6 +136,13 @@ try {
   console.error('❌ Error loading GPS routes:', error.message);
 }
 
+try {
+  app.use('/api/admin', require('./routes/admin'));
+  console.log('✅ Admin routes loaded');
+} catch (error) {
+  console.error('❌ Error loading admin routes:', error.message);
+}
+
 console.log('✅ All routes loaded');
 
 // Routes (vamos a crearlas paso a paso)
