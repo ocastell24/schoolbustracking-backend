@@ -278,9 +278,9 @@ router.post('/simulate-movement/:busId', async (req, res) => {
     let newLat = currentLocation?.latitude || -12.0464;
     let newLng = currentLocation?.longitude || -77.0428;
 
-    // Simular movimiento aleatorio (aprox 50-100 metros)
-    const latChange = (Math.random() - 0.5) * 0.001; // ~100m
-    const lngChange = (Math.random() - 0.5) * 0.001;
+ // Simular movimiento aleatorio más visible (aprox 200-500 metros)
+    const latChange = (Math.random() - 0.5) * 0.005; // ~500m
+    const lngChange = (Math.random() - 0.5) * 0.005;
     
     newLat += latChange;
     newLng += lngChange;
