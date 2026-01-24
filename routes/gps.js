@@ -253,4 +253,80 @@ function toRad(degrees) {
   return degrees * (Math.PI / 180);
 }
 
+/**
+ * POST /api/gps/simulate-movement/:busId
+ * Simular movimiento del bus (para demo)
+ */
+router.post('/simulate-movement/:busId', async (req, res) => {
+  try {
+    const { busId } = req.params;
+
+    // Verificar que el bus existe
+    const busDoc = await db.collection('buses').doc(busId).get();
+    
+    if (!busDoc.exists) {
+      return res.status(404).json({
+        error: true,
+        message: 'Bus no encontrado'
+      });
+    }
+
+    const busData = busDoc.data();
+    const currentLocation = busData.ubicacion_actual;
+
+    // Si no tiene ubicación inicial, usar Lima centro
+    let newLat = currentLocation?.latitude || -12.0464;
+    let newLng = currentLocation?.longitude || -77.0428;
+
+    // Simular movimiento aleatorio (aprox 50-100 metros)
+    const latChange = (Math.random() - 0.5) * 0.001; // ~100m
+    const lngChange = (Math.random() - 0.5) * 0.001;
+    
+    newLat += latChange;
+    newLng += lngChange;
+
+    // Velocidad aleatoria entre 20-40 km/h
+    const speed = Math.floor(Math.random() * 20) + 20;
+
+    const newPosition = {
+      latitude: newLat,
+      longitude: newLng,
+      speed: speed,
+      timestamp: new Date().toISOString()
+    };
+
+    // Actualizar ubicación del bus
+    await db.collection('buses').doc(busId).update({
+      ubicacion_actual: newPosition,
+      ultima_actualizacion: new Date().toISOString()
+    });
+
+    // Guardar en historial
+    await db.collection('gps_positions').add({
+      bus_id: busId,
+      placa: busData.placa,
+      ...newPosition,
+      createdAt: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'Posición actualizada',
+      data: {
+        bus_id: busId,
+        placa: busData.placa,
+        ubicacion: newPosition
+      }
+    });
+
+  } catch (error) {
+    console.error('Error simulando movimiento:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error al simular movimiento',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;
