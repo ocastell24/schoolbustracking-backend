@@ -109,10 +109,10 @@ router.post('/', /* verifyToken, */ async (req, res) => {
     } = req.body;
 
     // Validaciones
-    if (!nombre || !apellido || !dni || !padre_id || !colegio_id) {
+    if (!nombre || !apellido || !dni || !colegio_id) {
       return res.status(400).json({
         error: true,
-        message: 'Nombre, apellido, DNI, padre_id y colegio_id son requeridos'
+        message: 'Nombre, apellido, DNI y colegio_id son requeridos'
       });
     }
 
@@ -158,11 +158,18 @@ router.post('/', /* verifyToken, */ async (req, res) => {
 
     const alumnoRef = await db.collection('alumnos').add(alumnoData);
 
-    // Agregar alumno al array de hijos del padre
+  // Agregar alumno al array de hijos del padre (solo si se proporciona padre_id)
+if (padre_id) {
+  try {
     await db.collection('usuarios').doc(padre_id).update({
       hijos: admin.firestore.FieldValue.arrayUnion(alumnoRef.id),
       updatedAt: new Date().toISOString()
     });
+  } catch (error) {
+    console.warn('⚠️ No se pudo actualizar el padre:', error.message);
+    // No fallar si el padre no existe
+  }
+}
 
     res.status(201).json({
       success: true,
@@ -202,14 +209,14 @@ router.put('/:id', /* verifyToken, */ async (req, res) => {
     }
 
     const allowedFields = [
-      'nombre', 'apellido', 'fecha_nacimiento', 
+      'nombre', 'apellido', 'fecha_nacimiento',
       'grado', 'seccion', 'bus_id',
       'direccion_recogida', 'direccion_entrega',
       'foto_url', 'estado'
     ];
 
     const updateData = {};
-    
+
     for (const field of allowedFields) {
       if (updates[field] !== undefined) {
         if (field === 'nombre' || field === 'apellido') {
