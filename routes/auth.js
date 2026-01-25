@@ -192,4 +192,74 @@ router.get('/me', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/auth/login
+ * Login de usuario (por teléfono)
+ */
+router.post('/login', async (req, res) => {
+  try {
+    const { telefono } = req.body;
+
+    if (!telefono) {
+      return res.status(400).json({
+        error: true,
+        message: 'Teléfono es requerido'
+      });
+    }
+
+    console.log('🔐 Intento de login:', telefono);
+
+    // Buscar usuario por teléfono
+    const usuariosSnapshot = await db.collection('usuarios')
+      .where('telefono', '==', telefono)
+      .limit(1)
+      .get();
+
+    if (usuariosSnapshot.empty) {
+      console.log('❌ Usuario no encontrado:', telefono);
+      return res.status(404).json({
+        error: true,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    const usuarioDoc = usuariosSnapshot.docs[0];
+    const usuario = usuarioDoc.data();
+
+    console.log('✅ Usuario encontrado:', usuario.nombre, '- Rol:', usuario.rol);
+
+    // Verificar estado
+    if (usuario.estado !== 'activo') {
+      console.log('⚠️ Usuario no activo:', usuario.estado);
+      return res.status(403).json({
+        error: true,
+        message: 'Usuario inactivo o pendiente de aprobación'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Login exitoso',
+      data: {
+        uid: usuarioDoc.id,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido || '',
+        telefono: usuario.telefono,
+        email: usuario.email || null,
+        rol: usuario.rol || 'padre',
+        colegio_id: usuario.colegio_id || null,
+        estado: usuario.estado
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error en login',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;
