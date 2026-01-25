@@ -87,14 +87,14 @@ router.get('/:id', /* verifyToken, */ async (req, res) => {
  */
 router.post('/', /* verifyToken, */ async (req, res) => {
   try {
-    const { 
-      placa, 
-      modelo, 
-      capacidad, 
+    const {
+      placa,
+      modelo,
+      capacidad,
       año,
       color,
       colegio_id,
-      gps_imei 
+      gps_imei
     } = req.body;
 
     // Validaciones
@@ -191,15 +191,17 @@ router.put('/:id', /* verifyToken, */ async (req, res) => {
 
     // Campos permitidos para actualizar
     const allowedFields = [
-      'modelo', 'capacidad', 'año', 'color', 
+      'placa', 'modelo', 'capacidad', 'año', 'color',
       'gps_imei', 'conductor_id', 'estado'
     ];
 
     const updateData = {};
-    
+
     for (const field of allowedFields) {
       if (updates[field] !== undefined) {
-        if (field === 'modelo' || field === 'color') {
+        if (field === 'placa') {
+          updateData[field] = updates[field].toUpperCase(); // ← AGREGAR
+        } else if (field === 'modelo' || field === 'color') {
           updateData[field] = sanitizeString(updates[field]);
         } else if (field === 'capacidad' || field === 'año') {
           updateData[field] = parseInt(updates[field]);
