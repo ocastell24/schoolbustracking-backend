@@ -149,6 +149,8 @@ router.post('/', /* verifyToken, */ async (req, res) => {
       bus_id: null, // Se asigna después
       direccion_recogida: direccion_recogida || null,
       direccion_entrega: direccion_entrega || null,
+      telefono_contacto: telefono_contacto || null,
+      telefono_contacto, 
       foto_url: foto_url || null,
       estado: 'activo', // activo, inactivo
       asistencias: [],
@@ -212,6 +214,7 @@ router.put('/:id', /* verifyToken, */ async (req, res) => {
       'nombre', 'apellido', 'fecha_nacimiento',
       'grado', 'seccion', 'bus_id',
       'direccion_recogida', 'direccion_entrega',
+      'telefono_contacto', 
       'foto_url', 'estado'
     ];
 
