@@ -204,7 +204,7 @@ router.get('/bus/:busId/history', async (req, res) => {
 async function checkProximityAlerts(busId, busLat, busLng, alumnosDocs) {
   for (const alumnoDoc of alumnosDocs) {
     const alumno = alumnoDoc.data();
-    
+
     // Si el alumno tiene dirección de recogida con coordenadas
     if (alumno.direccion_recogida?.latitude && alumno.direccion_recogida?.longitude) {
       const distance = calculateDistance(
@@ -237,15 +237,15 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // Radio de la Tierra en km
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-  
-  const a = 
+
+  const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  
+
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
-  
+
   return distance; // en kilómetros
 }
 
@@ -263,7 +263,7 @@ router.post('/simulate-movement/:busId', async (req, res) => {
 
     // Verificar que el bus existe
     const busDoc = await db.collection('buses').doc(busId).get();
-    
+
     if (!busDoc.exists) {
       return res.status(404).json({
         error: true,
@@ -278,10 +278,10 @@ router.post('/simulate-movement/:busId', async (req, res) => {
     let newLat = currentLocation?.latitude || -12.0464;
     let newLng = currentLocation?.longitude || -77.0428;
 
- // Simular movimiento aleatorio más visible (aprox 200-500 metros)
+    // Simular movimiento aleatorio más visible (aprox 200-500 metros)
     const latChange = (Math.random() - 0.5) * 0.005; // ~500m
     const lngChange = (Math.random() - 0.5) * 0.005;
-    
+
     newLat += latChange;
     newLng += lngChange;
 
@@ -329,4 +329,70 @@ router.post('/simulate-movement/:busId', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/gps/update-position/:busId
+ * Actualizar posición GPS del bus (por el conductor)
+ */
+router.post('/update-position/:busId', async (req, res) => {
+  try {
+    const { busId } = req.params;
+    const { latitude, longitude, speed } = req.body;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        error: true,
+        message: 'latitude y longitude son requeridos'
+      });
+    }
+
+    // Verificar que el bus existe
+    const busDoc = await db.collection('buses').doc(busId).get();
+
+    if (!busDoc.exists) {
+      return res.status(404).json({
+        error: true,
+        message: 'Bus no encontrado'
+      });
+    }
+
+    const ubicacion = {
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      speed: speed ? parseFloat(speed) : 0,
+      timestamp: new Date().toISOString()
+    };
+
+    // Actualizar ubicación del bus
+    await db.collection('buses').doc(busId).update({
+      ubicacion_actual: ubicacion,
+      ultima_actualizacion: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    // Guardar en historial GPS
+    await db.collection('gps_positions').add({
+      bus_id: busId,
+      placa: busDoc.data().placa,
+      latitude: ubicacion.latitude,
+      longitude: ubicacion.longitude,
+      speed: ubicacion.speed,
+      timestamp: ubicacion.timestamp,
+      createdAt: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'Ubicación actualizada',
+      data: ubicacion
+    });
+
+  } catch (error) {
+    console.error('❌ Update position error:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error al actualizar posición',
+      details: error.message
+    });
+  }
+});
 module.exports = router;
