@@ -149,6 +149,15 @@ try {
 } catch (error) {
   console.error('❌ Error loading parents routes:', error.message);
 }
+
+
+try {
+  app.use('/api/conductores', require('./routes/conductores'));
+  console.log('✅ Conductores routes loaded');
+} catch (error) {
+  console.error('❌ Error loading conductores routes:', error.message);
+}
+
 console.log('✅ All routes loaded');
 
 // Routes (vamos a crearlas paso a paso)
