@@ -93,4 +93,94 @@ router.get('/me/buses', checkRole(['padre']), async (req, res) => {
   }
 });
 
+/**
+ * GET /api/parents/me/asistencias
+ * Obtener historial de asistencias de los hijos del padre
+ */
+router.get('/me/asistencias', checkRole(['padre']), async (req, res) => {
+  try {
+    const padreId = req.user.id;
+    const { dias = 7 } = req.query; // Por defecto últimos 7 días
+
+    console.log('📋 Obteniendo asistencias del padre:', padreId);
+
+    // Obtener IDs de los hijos del padre
+    const alumnosSnapshot = await db.collection('alumnos')
+      .where('padre_id', '==', padreId)
+      .where('estado', '==', 'activo')
+      .get();
+
+    if (alumnosSnapshot.empty) {
+      return res.json({
+        success: true,
+        count: 0,
+        data: []
+      });
+    }
+
+    const hijosIds = [];
+    const hijosMap = {};
+    
+    alumnosSnapshot.forEach(doc => {
+      const alumno = doc.data();
+      hijosIds.push(doc.id);
+      hijosMap[doc.id] = {
+        nombre: `${alumno.nombre} ${alumno.apellido || ''}`,
+        grado: alumno.grado,
+        seccion: alumno.seccion
+      };
+    });
+
+    console.log('👨‍👩‍👧‍👦 Hijos encontrados:', hijosIds.length);
+
+    // Calcular fecha límite
+    const fechaLimite = new Date();
+    fechaLimite.setDate(fechaLimite.getDate() - parseInt(dias));
+
+    // Obtener asistencias de los hijos
+    const asistencias = [];
+    
+    for (const alumnoId of hijosIds) {
+      const asistenciasSnapshot = await db.collection('asistencias')
+        .where('alumno_id', '==', alumnoId)
+        .orderBy('timestamp', 'desc')
+        .get();
+
+      asistenciasSnapshot.forEach(doc => {
+        const asistencia = doc.data();
+        const fechaAsistencia = new Date(asistencia.fecha);
+        
+        // Filtrar por fecha
+        if (fechaAsistencia >= fechaLimite) {
+          asistencias.push({
+            id: doc.id,
+            ...asistencia,
+            alumno_info: hijosMap[alumnoId]
+          });
+        }
+      });
+    }
+
+    // Ordenar por fecha descendente
+    asistencias.sort((a, b) => b.timestamp - a.timestamp);
+
+    console.log('✅ Asistencias encontradas:', asistencias.length);
+
+    res.json({
+      success: true,
+      count: asistencias.length,
+      data: asistencias,
+      periodo: `Últimos ${dias} días`
+    });
+
+  } catch (error) {
+    console.error('❌ Get asistencias error:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error al obtener asistencias',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;
