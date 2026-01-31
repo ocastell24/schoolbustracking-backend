@@ -395,4 +395,127 @@ router.post('/update-position/:busId', async (req, res) => {
     });
   }
 });
+
+/**
+ * POST /api/gps/traccar-webhook
+ * Recibir actualizaciones de posición desde Traccar
+ */
+router.post('/traccar-webhook', async (req, res) => {
+  try {
+    console.log('📡 Webhook de Traccar recibido:', JSON.stringify(req.body, null, 2));
+
+    const { device, position } = req.body;
+
+    // Validar que vengan los datos necesarios
+    if (!device || !position) {
+      console.warn('⚠️ Webhook incompleto:', req.body);
+      return res.status(400).json({
+        error: true,
+        message: 'Datos incompletos en webhook'
+      });
+    }
+
+    // Buscar el bus por el IMEI del dispositivo GPS
+    // El campo gps_imei debe contener el uniqueId del dispositivo en Traccar
+    const deviceId = device.uniqueId || device.id?.toString();
+
+    if (!deviceId) {
+      console.warn('⚠️ No se pudo obtener device ID');
+      return res.status(400).json({
+        error: true,
+        message: 'Device ID no encontrado'
+      });
+    }
+
+    console.log('🔍 Buscando bus con IMEI:', deviceId);
+
+    const busesSnapshot = await db.collection('buses')
+      .where('gps_imei', '==', deviceId)
+      .limit(1)
+      .get();
+
+    if (busesSnapshot.empty) {
+      console.warn('⚠️ Bus no encontrado para dispositivo:', deviceId);
+      return res.status(404).json({
+        error: true,
+        message: `Bus no encontrado para dispositivo ${deviceId}`
+      });
+    }
+
+    const busDoc = busesSnapshot.docs[0];
+    const busId = busDoc.id;
+    const bus = busDoc.data();
+
+    console.log('✅ Bus encontrado:', bus.placa);
+
+    // Preparar datos de ubicación
+    const ubicacion = {
+      latitude: parseFloat(position.latitude),
+      longitude: parseFloat(position.longitude),
+      speed: position.speed ? parseFloat(position.speed) : 0,
+      altitude: position.altitude || 0,
+      course: position.course || 0,
+      timestamp: position.deviceTime || position.fixTime || new Date().toISOString(),
+      source: 'traccar',
+      deviceId: deviceId
+    };
+
+    // Actualizar ubicación actual del bus
+    await db.collection('buses').doc(busId).update({
+      ubicacion_actual: ubicacion,
+      ultima_actualizacion: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    console.log('✅ Ubicación del bus actualizada:', bus.placa);
+
+    // Guardar en historial GPS
+    await db.collection('gps_positions').add({
+      bus_id: busId,
+      placa: bus.placa,
+      latitude: ubicacion.latitude,
+      longitude: ubicacion.longitude,
+      speed: ubicacion.speed,
+      altitude: ubicacion.altitude,
+      course: ubicacion.course,
+      source: 'traccar',
+      device_id: deviceId,
+      timestamp: ubicacion.timestamp,
+      createdAt: new Date().toISOString()
+    });
+
+    console.log('✅ Posición guardada en historial');
+
+    res.json({
+      success: true,
+      message: 'Ubicación actualizada correctamente',
+      bus: {
+        id: busId,
+        placa: bus.placa,
+        ubicacion: ubicacion
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Traccar webhook error:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error procesando webhook de Traccar',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/gps/traccar-test
+ * Endpoint de prueba para verificar que Traccar puede conectarse
+ */
+router.get('/traccar-test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Endpoint de Traccar funcionando',
+    timestamp: new Date().toISOString()
+  });
+});
+
 module.exports = router;
