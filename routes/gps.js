@@ -402,6 +402,10 @@ router.post('/update-position/:busId', async (req, res) => {
  */
 router.post('/traccar-webhook', async (req, res) => {
   try {
+    console.log('📡 Query params:', JSON.stringify(req.query));
+    console.log('📡 Body:', JSON.stringify(req.body));
+    console.log('📡 Headers:', JSON.stringify(req.headers));
+
     // Traccar envía datos como query params en la URL
     const { id, lat, lon, speed, time } = req.query;
 
