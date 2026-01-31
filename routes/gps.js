@@ -402,30 +402,25 @@ router.post('/update-position/:busId', async (req, res) => {
  */
 router.post('/traccar-webhook', async (req, res) => {
   try {
-    console.log('📡 Webhook de Traccar recibido:', JSON.stringify(req.body, null, 2));
+    // Traccar envía datos como query params en la URL
+    const { id, lat, lon, speed, time } = req.query;
 
-    const { device, position } = req.body;
+    console.log('📡 Webhook de Traccar recibido:', { id, lat, lon, speed, time });
 
-    // Validar que vengan los datos necesarios
-    if (!device || !position) {
-      console.warn('⚠️ Webhook incompleto:', req.body);
+    // Validar datos
+    if (!id || !lat || !lon) {
+      console.warn('⚠️ Webhook incompleto:', req.query);
       return res.status(400).json({
         error: true,
         message: 'Datos incompletos en webhook'
       });
     }
 
+    const deviceId = id;
+
     // Buscar el bus por el IMEI del dispositivo GPS
     // El campo gps_imei debe contener el uniqueId del dispositivo en Traccar
-    const deviceId = device.uniqueId || device.id?.toString();
-
-    if (!deviceId) {
-      console.warn('⚠️ No se pudo obtener device ID');
-      return res.status(400).json({
-        error: true,
-        message: 'Device ID no encontrado'
-      });
-    }
+    // const deviceId = device.uniqueId || device.id?.toString();
 
     console.log('🔍 Buscando bus con IMEI:', deviceId);
 
@@ -450,12 +445,10 @@ router.post('/traccar-webhook', async (req, res) => {
 
     // Preparar datos de ubicación
     const ubicacion = {
-      latitude: parseFloat(position.latitude),
-      longitude: parseFloat(position.longitude),
-      speed: position.speed ? parseFloat(position.speed) : 0,
-      altitude: position.altitude || 0,
-      course: position.course || 0,
-      timestamp: position.deviceTime || position.fixTime || new Date().toISOString(),
+      latitude: parseFloat(lat),
+      longitude: parseFloat(lon),
+      speed: speed ? parseFloat(speed) : 0,
+      timestamp: time || new Date().toISOString(),
       source: 'traccar',
       deviceId: deviceId
     };
