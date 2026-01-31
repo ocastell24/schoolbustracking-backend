@@ -372,10 +372,12 @@ router.post('/update-position/:busId', async (req, res) => {
     // Guardar en historial GPS
     await db.collection('gps_positions').add({
       bus_id: busId,
-      placa: busDoc.data().placa,
+      placa: bus.placa,
       latitude: ubicacion.latitude,
       longitude: ubicacion.longitude,
       speed: ubicacion.speed,
+      source: 'traccar',
+      device_id: deviceId,
       timestamp: ubicacion.timestamp,
       createdAt: new Date().toISOString()
     });
