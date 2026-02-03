@@ -409,7 +409,7 @@ router.post('/traccar-webhook', async (req, res) => {
     console.log('📡 Headers:', JSON.stringify(req.headers));
 
     // Traccar envía datos como query params en la URL
-    const { id, lat, lon, speed, time } = req.query;
+    const { id, lat, lon, speed, altitude, course, time } = req.query;
 
     console.log('📡 Webhook de Traccar recibido:', { id, lat, lon, speed, time });
 
@@ -450,14 +450,16 @@ router.post('/traccar-webhook', async (req, res) => {
     console.log('✅ Bus encontrado:', bus.placa);
 
     // Preparar datos de ubicación
-    const ubicacion = {
-      latitude: parseFloat(lat),
-      longitude: parseFloat(lon),
-      speed: speed ? parseFloat(speed) : 0,
-      timestamp: time || new Date().toISOString(),
-      source: 'traccar',
-      deviceId: deviceId
-    };
+  const ubicacion = {
+  latitude: parseFloat(lat),
+  longitude: parseFloat(lon),
+  speed: speed ? parseFloat(speed) : 0,
+  altitude: altitude ? parseFloat(altitude) : 0,
+  course: course ? parseFloat(course) : 0,
+  timestamp: time || new Date().toISOString(),
+  source: 'traccar',
+  deviceId: deviceId
+};
 
     // Actualizar ubicación actual del bus
     await db.collection('buses').doc(busId).update({
