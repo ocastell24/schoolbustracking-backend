@@ -6,6 +6,9 @@ require('dotenv').config();
 // Initialize Firebase
 const { db } = require('./config/firebase');
 
+// Initialize Traccar Service
+const traccarService = require('./services/traccarService');
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -38,7 +41,8 @@ app.get('/health', async (req, res) => {
       message: 'SchoolBusTracking API is running',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
-      firebase: '✅ Connected'
+      firebase: '✅ Connected',
+      traccarPolling: '✅ Active'
     });
   } catch (error) {
     console.error('❌ Firebase error:', error.message);
@@ -195,6 +199,25 @@ app.listen(PORT, () => {
 ║  Health: http://localhost:${PORT}/health  ║
 ╚════════════════════════════════════════╝
   `);
+
+  // Iniciar polling de Traccar después de que el servidor esté listo
+  setTimeout(() => {
+    console.log('🚀 Iniciando servicio de polling de Traccar...');
+    traccarService.startPolling(10); // Polling cada 10 segundos
+  }, 3000); // Esperar 3 segundos después del inicio
+});
+
+// Cleanup al cerrar el servidor
+process.on('SIGTERM', () => {
+  console.log('⏹️ SIGTERM recibido, deteniendo polling...');
+  traccarService.stopPolling();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('⏹️ SIGINT recibido, deteniendo polling...');
+  traccarService.stopPolling();
+  process.exit(0);
 });
 
 module.exports = app;

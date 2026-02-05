@@ -6,7 +6,7 @@ async function configureBusWithST901() {
     console.log('🚌 Configurando bus con ST901...\n');
 
     // IMEI de tu ST901 (cámbialo por el real)
-    const st901_imei = '123456789012345'; // ← CAMBIAR POR TU IMEI REAL
+    const st901_imei = '9172976591'; // ← CAMBIAR POR TU IMEI REAL
     
     // Placa del bus a configurar
     const placaBus = 'ABC-123'; // ← Puedes cambiar esto

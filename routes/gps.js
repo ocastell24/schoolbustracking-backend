@@ -468,7 +468,7 @@ router.post('/traccar-webhook', async (req, res) => {
       updatedAt: new Date().toISOString()
     });
 
-    console.log('✅ Ubicación del bus actualizada:', bus.placa);
+    console.log('✅ :', bus.placa);
 
     // Guardar en historial GPS
     await db.collection('gps_positions').add({
