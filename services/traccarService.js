@@ -76,13 +76,17 @@ class TraccarService {
       const deviceId = position.deviceId;
       const positionId = position.id;
 
+      console.log(`🔄 Intentando procesar deviceId: ${deviceId}, positionId: ${positionId}`);
+
       // Verificar si ya procesamos esta posición
       const lastPositionId = this.lastPositions.get(deviceId);
       if (lastPositionId === positionId) {
+        console.log(`⏭️ Posición ${positionId} ya procesada, skip`);
         return; // Ya procesada, skip
       }
 
       // Obtener información del dispositivo desde Traccar
+      console.log(`📞 Consultando dispositivo ${deviceId} en Traccar...`);
       const deviceResponse = await axios.get(`${this.traccarUrl}/api/devices/${deviceId}`, {
         auth: {
           username: this.traccarUser,
@@ -93,7 +97,7 @@ class TraccarService {
       const device = deviceResponse.data;
       const uniqueId = device.uniqueId; // IMEI del GPS
 
-      console.log(`🔍 Procesando posición de dispositivo: ${uniqueId}`);
+      console.log(`🔍 Procesando posición de dispositivo: ${uniqueId} (deviceId: ${deviceId})`);
 
       // Buscar bus con este IMEI en Firestore
       const busesSnapshot = await db.collection('buses')
@@ -103,6 +107,8 @@ class TraccarService {
 
       if (busesSnapshot.empty) {
         console.log(`⚠️ Bus no encontrado para IMEI: ${uniqueId}`);
+        // Marcar como procesada para no seguir intentando
+        this.lastPositions.set(deviceId, positionId);
         return;
       }
 
@@ -121,6 +127,8 @@ class TraccarService {
         source: 'traccar-polling',
         deviceId: uniqueId
       };
+
+      console.log(`💾 Actualizando bus ${bus.placa} con posición:`, ubicacion);
 
       // Actualizar ubicación actual del bus
       await db.collection('buses').doc(busId).update({
@@ -150,7 +158,8 @@ class TraccarService {
       console.log(`✅ Bus ${bus.placa} actualizado con posición de Traccar`);
 
     } catch (error) {
-      console.error('❌ Error procesando posición:', error.message);
+      console.error(`❌ Error procesando posición (deviceId: ${position?.deviceId}):`, error.message);
+      console.error('Stack trace:', error.stack);
     }
   }
 }
