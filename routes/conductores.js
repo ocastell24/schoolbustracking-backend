@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
 const { checkRole } = require('../middleware/checkRole');
+const notificationService = require('../services/notificationService');
 
 /**
  * GET /api/conductores/me/bus
@@ -149,7 +150,9 @@ router.post('/asistencia', checkRole(['conductor']), async (req, res) => {
       });
     }
 
-    const busId = busesSnapshot.docs[0].id;
+    const busDoc = busesSnapshot.docs[0];
+    const busId = busDoc.id;
+    const bus = busDoc.data();
 
     // Verificar que el alumno esté en el bus
     const alumnoDoc = await db.collection('alumnos').doc(alumno_id).get();
@@ -184,6 +187,17 @@ router.post('/asistencia', checkRole(['conductor']), async (req, res) => {
     const asistenciaRef = await db.collection('asistencias').add(asistenciaData);
 
     console.log('✅ Asistencia registrada:', asistenciaRef.id);
+
+    // Enviar notificación al padre
+    console.log('📨 Enviando notificación al padre...');
+    
+    if (tipo === 'subida') {
+      await notificationService.notifyStudentPickup(alumno_id, bus.placa);
+      console.log('✅ Notificación de subida enviada');
+    } else if (tipo === 'bajada') {
+      await notificationService.notifyStudentDropoff(alumno_id, bus.placa);
+      console.log('✅ Notificación de bajada enviada');
+    }
 
     res.json({
       success: true,
