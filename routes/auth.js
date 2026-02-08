@@ -262,4 +262,54 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Agregar este endpoint en routes/auth.js
+
+/**
+ * POST /api/auth/update-fcm-token
+ * Actualizar token FCM del usuario
+ */
+router.post('/update-fcm-token', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { fcm_token } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        error: true,
+        message: 'Usuario no autenticado'
+      });
+    }
+
+    if (!fcm_token) {
+      return res.status(400).json({
+        error: true,
+        message: 'fcm_token es requerido'
+      });
+    }
+
+    console.log(`📱 Actualizando FCM token para usuario: ${userId}`);
+
+    // Actualizar token en Firestore
+    await db.collection('users').doc(userId).update({
+      fcm_token: fcm_token,
+      fcm_token_updated_at: new Date().toISOString()
+    });
+
+    console.log('✅ Token FCM actualizado exitosamente');
+
+    res.json({
+      success: true,
+      message: 'Token FCM actualizado'
+    });
+
+  } catch (error) {
+    console.error('❌ Error actualizando token FCM:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error al actualizar token FCM',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;
