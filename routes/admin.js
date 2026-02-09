@@ -103,4 +103,104 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// ============================================
+// NUEVAS FUNCIONES (agregar aquí)
+// ============================================
+
+/**
+ * GET /api/admin/colegios/:colegioId
+ * Obtener información de un colegio específico
+ */
+router.get('/colegios/:colegioId', async (req, res) => {
+  try {
+    const { colegioId } = req.params;
+
+    const colegioDoc = await db.collection('colegios').doc(colegioId).get();
+
+    if (!colegioDoc.exists) {
+      return res.status(404).json({
+        error: true,
+        message: 'Colegio no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: colegioDoc.id,
+        ...colegioDoc.data()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo colegio:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error obteniendo colegio',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/admin/asistencias
+ * Obtener asistencias filtradas por fecha y colegio
+ */
+router.get('/asistencias', async (req, res) => {
+  try {
+    const { fecha, colegio_id } = req.query;
+
+    let query = db.collection('asistencias');
+
+    // Filtrar por fecha si se proporciona
+    if (fecha) {
+      const startDate = new Date(fecha);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(fecha);
+      endDate.setHours(23, 59, 59, 999);
+
+      query = query
+        .where('timestamp', '>=', startDate.getTime())
+        .where('timestamp', '<=', endDate.getTime());
+    }
+
+    const snapshot = await query.get();
+
+    let asistencias = [];
+    snapshot.forEach(doc => {
+      asistencias.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    // Si hay filtro de colegio, filtrar por bus_id del colegio
+    if (colegio_id) {
+      // Obtener buses del colegio
+      const busesSnapshot = await db.collection('buses')
+        .where('colegio_id', '==', colegio_id)
+        .get();
+      
+      const busIds = busesSnapshot.docs.map(doc => doc.id);
+      
+      // Filtrar asistencias por buses del colegio
+      asistencias = asistencias.filter(a => busIds.includes(a.bus_id));
+    }
+
+    res.json({
+      success: true,
+      count: asistencias.length,
+      data: asistencias
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo asistencias:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error obteniendo asistencias',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;
