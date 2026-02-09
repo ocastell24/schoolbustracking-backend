@@ -290,7 +290,7 @@ router.post('/update-fcm-token', async (req, res) => {
     console.log(`📱 Actualizando FCM token para usuario: ${userId}`);
 
     // Actualizar token en Firestore
-    await db.collection('users').doc(userId).update({
+    await db.collection('usuarios').doc(userId).update({
       fcm_token: fcm_token,
       fcm_token_updated_at: new Date().toISOString()
     });
