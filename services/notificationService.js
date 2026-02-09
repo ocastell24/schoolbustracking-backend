@@ -8,7 +8,7 @@ class NotificationService {
   async sendNotificationToUser(userId, title, body, data = {}) {
     try {
       // Obtener token FCM del usuario desde Firestore
-      const userDoc = await admin.firestore().collection('users').doc(userId).get();
+      const userDoc = await admin.firestore().collection('usuarios').doc(userId).get();
       
       if (!userDoc.exists) {
         console.log(`⚠️ Usuario ${userId} no encontrado`);
@@ -63,7 +63,7 @@ class NotificationService {
       // Si el token es inválido, limpiarlo de la base de datos
       if (error.code === 'messaging/invalid-registration-token' || 
           error.code === 'messaging/registration-token-not-registered') {
-        await admin.firestore().collection('users').doc(userId).update({
+        await admin.firestore().collection('usuarios').doc(userId).update({
           fcm_token: null
         });
         console.log(`🗑️ Token FCM inválido eliminado para usuario ${userId}`);
