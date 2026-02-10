@@ -105,6 +105,7 @@ router.post('/', /* verifyToken, */ async (req, res) => {
       colegio_id,
       direccion_recogida,
       direccion_entrega,
+      telefono_contacto,
       foto_url
     } = req.body;
 
