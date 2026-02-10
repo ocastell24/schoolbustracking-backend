@@ -145,7 +145,7 @@ router.post('/', /* verifyToken, */ async (req, res) => {
       fecha_nacimiento: fecha_nacimiento || null,
       grado: grado || null,
       seccion: seccion || null,
-      padre_id: padre_id,
+      padre_id: padre_id || null,  
       colegio_id: colegio_id,
       bus_id: null, // Se asigna después
       direccion_recogida: direccion_recogida || null,
