@@ -162,6 +162,20 @@ try {
   console.error('❌ Error loading conductores routes:', error.message);
 }
 
+try {
+  app.use('/api/colegios', require('./routes/colegios'));
+  console.log('✅ Colegios routes loaded');
+} catch (error) {
+  console.error('❌ Error loading colegios routes:', error.message);
+}
+
+try {
+  app.use('/api/usuarios', require('./routes/usuarios'));
+  console.log('✅ Usuarios routes loaded');
+} catch (error) {
+  console.error('❌ Error loading usuarios routes:', error.message);
+}
+
 console.log('✅ All routes loaded');
 
 // Routes (vamos a crearlas paso a paso)
