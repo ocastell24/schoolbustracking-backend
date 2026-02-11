@@ -106,6 +106,8 @@ router.post('/', /* verifyToken, */ async (req, res) => {
       direccion_recogida,
       direccion_entrega,
       telefono_contacto,
+      ubicacion_lat,        // ← AGREGAR
+      ubicacion_lng,        // ← AGREGAR
       foto_url
     } = req.body;
 
@@ -145,12 +147,14 @@ router.post('/', /* verifyToken, */ async (req, res) => {
       fecha_nacimiento: fecha_nacimiento || null,
       grado: grado || null,
       seccion: seccion || null,
-      padre_id: padre_id || null,  
+      padre_id: padre_id || null,
       colegio_id: colegio_id,
       bus_id: null, // Se asigna después
       direccion_recogida: direccion_recogida || null,
       direccion_entrega: direccion_entrega || null,
       telefono_contacto: telefono_contacto || null,
+      ubicacion_lat: ubicacion_lat ? parseFloat(ubicacion_lat) : null,     // ← AGREGAR
+      ubicacion_lng: ubicacion_lng ? parseFloat(ubicacion_lng) : null,     // ← AGREGAR
       foto_url: foto_url || null,
       estado: 'activo', // activo, inactivo
       asistencias: [],
@@ -160,18 +164,18 @@ router.post('/', /* verifyToken, */ async (req, res) => {
 
     const alumnoRef = await db.collection('alumnos').add(alumnoData);
 
-  // Agregar alumno al array de hijos del padre (solo si se proporciona padre_id)
-if (padre_id) {
-  try {
-    await db.collection('usuarios').doc(padre_id).update({
-      hijos: admin.firestore.FieldValue.arrayUnion(alumnoRef.id),
-      updatedAt: new Date().toISOString()
-    });
-  } catch (error) {
-    console.warn('⚠️ No se pudo actualizar el padre:', error.message);
-    // No fallar si el padre no existe
-  }
-}
+    // Agregar alumno al array de hijos del padre (solo si se proporciona padre_id)
+    if (padre_id) {
+      try {
+        await db.collection('usuarios').doc(padre_id).update({
+          hijos: admin.firestore.FieldValue.arrayUnion(alumnoRef.id),
+          updatedAt: new Date().toISOString()
+        });
+      } catch (error) {
+        console.warn('⚠️ No se pudo actualizar el padre:', error.message);
+        // No fallar si el padre no existe
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -214,7 +218,8 @@ router.put('/:id', /* verifyToken, */ async (req, res) => {
       'nombre', 'apellido', 'fecha_nacimiento',
       'grado', 'seccion', 'bus_id',
       'direccion_recogida', 'direccion_entrega',
-      'telefono_contacto', 
+      'telefono_contacto',
+      'ubicacion_lat', 'ubicacion_lng',  // ← AGREGAR
       'foto_url', 'estado'
     ];
 
@@ -224,6 +229,8 @@ router.put('/:id', /* verifyToken, */ async (req, res) => {
       if (updates[field] !== undefined) {
         if (field === 'nombre' || field === 'apellido') {
           updateData[field] = sanitizeString(updates[field]);
+        } else if (field === 'ubicacion_lat' || field === 'ubicacion_lng') {
+          updateData[field] = updates[field] ? parseFloat(updates[field]) : null;
         } else {
           updateData[field] = updates[field];
         }
