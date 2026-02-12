@@ -115,4 +115,94 @@ router.post('/', async (req, res) => {
   }
 });
 
+/**
+ * PUT /api/colegios/:id
+ * Actualizar colegio
+ */
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const colegioDoc = await db.collection('colegios').doc(id).get();
+
+    if (!colegioDoc.exists) {
+      return res.status(404).json({
+        error: true,
+        message: 'Colegio no encontrado'
+      });
+    }
+
+    const allowedFields = ['nombre', 'direccion', 'telefono', 'estado'];
+    const updateData = {};
+
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        updateData[field] = updates[field];
+      }
+    }
+
+    updateData.updatedAt = new Date().toISOString();
+
+    await db.collection('colegios').doc(id).update(updateData);
+
+    const updatedColegio = await db.collection('colegios').doc(id).get();
+
+    res.json({
+      success: true,
+      message: 'Colegio actualizado exitosamente',
+      data: {
+        id: updatedColegio.id,
+        ...updatedColegio.data()
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Update colegio error:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error al actualizar colegio',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/colegios/:id
+ * Eliminar colegio (soft delete)
+ */
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const colegioDoc = await db.collection('colegios').doc(id).get();
+
+    if (!colegioDoc.exists) {
+      return res.status(404).json({
+        error: true,
+        message: 'Colegio no encontrado'
+      });
+    }
+
+    await db.collection('colegios').doc(id).update({
+      estado: 'inactivo',
+      deletedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: 'Colegio eliminado exitosamente'
+    });
+
+  } catch (error) {
+    console.error('❌ Delete colegio error:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error al eliminar colegio',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;
