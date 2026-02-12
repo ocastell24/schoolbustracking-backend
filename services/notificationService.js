@@ -8,7 +8,7 @@ class NotificationService {
   async sendNotificationToUser(userId, title, body, data = {}) {
     try {
       // Obtener token FCM del usuario desde Firestore
-      const userDoc = await admin.firestore().collection('usuarios').doc(userId).get();
+      const userDoc = await admin.firestore().collection('users').doc(userId).get();
       
       if (!userDoc.exists) {
         console.log(`⚠️ Usuario ${userId} no encontrado`);
@@ -63,7 +63,7 @@ class NotificationService {
       // Si el token es inválido, limpiarlo de la base de datos
       if (error.code === 'messaging/invalid-registration-token' || 
           error.code === 'messaging/registration-token-not-registered') {
-        await admin.firestore().collection('usuarios').doc(userId).update({
+        await admin.firestore().collection('users').doc(userId).update({
           fcm_token: null
         });
         console.log(`🗑️ Token FCM inválido eliminado para usuario ${userId}`);
@@ -156,31 +156,48 @@ class NotificationService {
   /**
    * Notificar al padre cuando bus se acerca (proximidad)
    */
-  async notifyBusProximity(alumnoId, busPlaca, distance) {
+  async notifyBusProximity(alumnoId, busPlaca, distanceMeters, padreId = null) {
     try {
-      // Obtener información del alumno
-      const alumnoDoc = await admin.firestore().collection('alumnos').doc(alumnoId).get();
-      
-      if (!alumnoDoc.exists) {
-        return { success: false };
-      }
-
-      const alumno = alumnoDoc.data();
-      const padreId = alumno.padre_id;
-
+      // Si no se proporciona padreId, obtenerlo del alumno
       if (!padreId) {
-        return { success: false };
+        const alumnoDoc = await admin.firestore().collection('alumnos').doc(alumnoId).get();
+        
+        if (!alumnoDoc.exists) {
+          return { success: false };
+        }
+
+        const alumno = alumnoDoc.data();
+        padreId = alumno.padre_id;
+
+        if (!padreId) {
+          return { success: false };
+        }
       }
 
-      const title = '📍 El bus se acerca';
-      const body = `El bus ${busPlaca} está a ${Math.round(distance * 1000)}m de la ubicación de ${alumno.nombre}`;
+      // Obtener nombre del alumno
+      const alumnoDoc = await admin.firestore().collection('alumnos').doc(alumnoId).get();
+      const alumno = alumnoDoc.data();
+
+      let distanceText = '';
+      let emoji = '';
+      
+      if (distanceMeters <= 200) {
+        distanceText = `${distanceMeters}m (muy cerca)`;
+        emoji = '🔴';
+      } else if (distanceMeters <= 500) {
+        distanceText = `${distanceMeters}m`;
+        emoji = '🟡';
+      }
+
+      const title = `${emoji} El bus se acerca`;
+      const body = `El bus ${busPlaca} está a ${distanceText} de la ubicación de ${alumno.nombre}`;
       
       const data = {
         type: 'bus_proximity',
         alumno_id: alumnoId,
         alumno_nombre: `${alumno.nombre} ${alumno.apellido}`,
         bus_placa: busPlaca,
-        distance_km: distance.toString(),
+        distance_meters: distanceMeters.toString(),
         timestamp: new Date().toISOString()
       };
 

@@ -157,9 +157,114 @@ class TraccarService {
 
       console.log(`✅ Bus ${bus.placa} actualizado con posición de Traccar`);
 
+      // Verificar alertas de proximidad
+      await this.checkProximityAlerts(busId, ubicacion);
+
     } catch (error) {
       console.error(`❌ Error procesando posición (deviceId: ${position?.deviceId}):`, error.message);
       console.error('Stack trace:', error.stack);
+    }
+  }
+
+  /**
+   * Calcular distancia entre dos coordenadas (en metros) usando fórmula Haversine
+   */
+  calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; // Radio de la Tierra en metros
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distancia en metros
+  }
+
+  /**
+   * Verificar alertas de proximidad para alumnos
+   */
+  async checkProximityAlerts(busId, ubicacion) {
+    try {
+      const notificationService = require('./notificationService');
+
+      // Obtener alumnos asignados a este bus
+      const alumnosSnapshot = await db.collection('alumnos')
+        .where('bus_id', '==', busId)
+        .where('estado', '==', 'activo')
+        .get();
+
+      if (alumnosSnapshot.empty) {
+        return; // No hay alumnos asignados a este bus
+      }
+
+      for (const alumnoDoc of alumnosSnapshot.docs) {
+        const alumno = alumnoDoc.data();
+        const alumnoId = alumnoDoc.id;
+
+        // Verificar que el alumno tenga ubicación
+        if (!alumno.ubicacion_lat || !alumno.ubicacion_lng) {
+          continue;
+        }
+
+        // Calcular distancia
+        const distance = this.calculateDistance(
+          ubicacion.latitude,
+          ubicacion.longitude,
+          alumno.ubicacion_lat,
+          alumno.ubicacion_lng
+        );
+
+        console.log(`📏 Distancia bus → ${alumno.nombre}: ${Math.round(distance)}m`);
+
+        // Obtener datos del bus
+        const busDoc = await db.collection('buses').doc(busId).get();
+        const bus = busDoc.data();
+
+        // Verificar si ya enviamos notificación reciente para este alumno
+        const alertKey = `${busId}_${alumnoId}`;
+        const lastAlert = this.lastProximityAlerts?.get(alertKey);
+        const now = Date.now();
+
+        // Inicializar Map si no existe
+        if (!this.lastProximityAlerts) {
+          this.lastProximityAlerts = new Map();
+        }
+
+        // Alerta a 500 metros (solo si no se envió en los últimos 5 minutos)
+        if (distance <= 500 && distance > 200) {
+          if (!lastAlert || (now - lastAlert.time) > 5 * 60 * 1000) {
+            console.log(`🔔 Enviando alerta de 500m para ${alumno.nombre}`);
+            await notificationService.notifyBusProximity(
+              alumnoId,
+              bus.placa,
+              Math.round(distance),
+              alumno.padre_id
+            );
+            this.lastProximityAlerts.set(alertKey, { distance: 500, time: now });
+          }
+        }
+
+        // Alerta a 200 metros (solo si no se envió en los últimos 5 minutos)
+        if (distance <= 200) {
+          if (!lastAlert || lastAlert.distance !== 200 || (now - lastAlert.time) > 5 * 60 * 1000) {
+            console.log(`🔔 Enviando alerta de 200m para ${alumno.nombre}`);
+            await notificationService.notifyBusProximity(
+              alumnoId,
+              bus.placa,
+              Math.round(distance),
+              alumno.padre_id
+            );
+            this.lastProximityAlerts.set(alertKey, { distance: 200, time: now });
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Error verificando proximidad:', error.message);
     }
   }
 }
