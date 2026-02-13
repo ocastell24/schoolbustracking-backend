@@ -519,4 +519,67 @@ router.get('/traccar-test', (req, res) => {
   });
 });
 
+// Agregar esta ruta al archivo routes/gps.js existente
+
+/**
+ * GET /api/gps/history
+ * Obtener historial de posiciones GPS de un bus
+ */
+router.get('/history', async (req, res) => {
+  try {
+    const { bus_id, fecha } = req.query;
+
+    if (!bus_id) {
+      return res.status(400).json({
+        error: true,
+        message: 'bus_id es requerido'
+      });
+    }
+
+    let query = db.collection('gps_positions')
+      .where('bus_id', '==', bus_id)
+      .orderBy('timestamp', 'desc');
+
+    // Si se proporciona fecha, filtrar por ese día
+    if (fecha) {
+      const startDate = new Date(fecha);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(fecha);
+      endDate.setHours(23, 59, 59, 999);
+
+      query = query
+        .where('timestamp', '>=', startDate.toISOString())
+        .where('timestamp', '<=', endDate.toISOString());
+    }
+
+    const snapshot = await query.limit(500).get();
+
+    const positions = [];
+    snapshot.forEach(doc => {
+      positions.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    // Invertir para que estén en orden cronológico (más antiguo primero)
+    positions.reverse();
+
+    res.json({
+      success: true,
+      count: positions.length,
+      data: positions
+    });
+
+  } catch (error) {
+    console.error('❌ Get GPS history error:', error);
+    res.status(500).json({
+      error: true,
+      message: 'Error al obtener historial GPS',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;
