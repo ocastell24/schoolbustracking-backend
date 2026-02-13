@@ -105,12 +105,12 @@ router.post('/', /* verifyToken, */ async (req, res) => {
       });
     }
 
-    if (!isValidPlaca(placa)) {
-      return res.status(400).json({
-        error: true,
-        message: 'Formato de placa inválido. Use: ABC-123 o ABC123'
-      });
-    }
+    //if (!isValidPlaca(placa)) {
+    //  return res.status(400).json({
+    //    error: true,
+    //    message: 'Formato de placa inválido. Use: ABC-123 o ABC123'
+    //  });
+    //}
 
     if (capacidad < 1 || capacidad > 100) {
       return res.status(400).json({
