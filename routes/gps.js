@@ -553,7 +553,7 @@ router.get('/history', async (req, res) => {
         .where('timestamp', '<=', endDate.toISOString());
     }
 
-    const snapshot = await query.limit(500).get();
+    const snapshot = await query.limit(2000).get();
 
     const positions = [];
     snapshot.forEach(doc => {
