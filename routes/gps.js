@@ -1,7 +1,10 @@
 // routes/gps.js
+// routes/gps.js
 const express = require('express');
 const router = express.Router();
 const { db, admin } = require('../config/firebase');
+const { verifyToken } = require('../middleware/auth');  // ← AGREGAR
+const { checkCamionAccess } = require('../middleware/checkPermissions');  // ← AGREGAR
 
 /**
  * POST /api/gps/position
