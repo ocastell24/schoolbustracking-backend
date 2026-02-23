@@ -525,37 +525,36 @@ router.get('/traccar-test', (req, res) => {
  * GET /api/gps/history
  * Obtener historial de posiciones GPS de un bus
  */
-router.get('/history', async (req, res) => {
+router.get('/history', async (req, res, next) => {
+  console.log('🎯 ===== INICIO PETICIÓN /api/gps/history =====');
+  console.log('🎯 Query params:', JSON.stringify(req.query));
+  console.log('🎯 Headers Authorization:', req.headers.authorization ? 'Presente' : 'Ausente');
+  next();
+}, verifyToken, async (req, res, next) => {
+  console.log('✅ Token verificado, usuario:', req.user?.id);
+  next();
+}, checkCamionAccess, async (req, res) => {
   try {
-    const { bus_id, fecha } = req.query;
+    const { bus_id, camion_id, fecha } = req.query;
+    const busId = bus_id || camion_id;
 
-    if (!bus_id) {
+    console.log('📅 Procesando historial para bus:', busId, 'fecha:', fecha);
+
+    if (!busId) {
       return res.status(400).json({
         error: true,
-        message: 'bus_id es requerido'
+        message: 'bus_id o camion_id es requerido'
       });
     }
 
-    let query = db.collection('gps_positions')
-      .where('bus_id', '==', bus_id)
-      .orderBy('timestamp', 'desc');
+    // Primero obtener todas las posiciones del camión
+    const snapshot = await db.collection('gps_positions')
+      .where('bus_id', '==', busId)
+      .orderBy('timestamp', 'desc')
+      .limit(10000)  // ← Aumentado de 2000 a 10000
+      .get();
 
-    // Si se proporciona fecha, filtrar por ese día
-    if (fecha) {
-      const startDate = new Date(fecha);
-      startDate.setHours(0, 0, 0, 0);
-      
-      const endDate = new Date(fecha);
-      endDate.setHours(23, 59, 59, 999);
-
-      query = query
-        .where('timestamp', '>=', startDate.toISOString())
-        .where('timestamp', '<=', endDate.toISOString());
-    }
-
-    const snapshot = await query.limit(2000).get();
-
-    const positions = [];
+    let positions = [];
     snapshot.forEach(doc => {
       positions.push({
         id: doc.id,
@@ -563,7 +562,37 @@ router.get('/history', async (req, res) => {
       });
     });
 
-    // Invertir para que estén en orden cronológico (más antiguo primero)
+    console.log('📊 Total posiciones antes de filtrar:', positions.length);
+    if (positions.length > 0) {
+      console.log('🕐 Primera posición timestamp:', positions[0]?.timestamp);
+      console.log('🕐 Última posición timestamp:', positions[positions.length - 1]?.timestamp);
+    }
+
+    // Si hay fecha, filtrar en memoria
+    if (fecha) {
+      console.log('📅 Fecha solicitada:', fecha);
+      
+      // Crear fechas en UTC, luego ajustar a hora de Perú (UTC-5)
+      const startDate = new Date(fecha + 'T05:00:00.000Z'); // 00:00 Peru = 05:00 UTC
+      const endDate = new Date(fecha + 'T04:59:59.999Z');
+      endDate.setDate(endDate.getDate() + 1); // 23:59 Peru del siguiente día
+
+      console.log('🌅 Start date (UTC):', startDate.toISOString());
+      console.log('🌆 End date (UTC):', endDate.toISOString());
+
+      positions = positions.filter(pos => {
+        const posDate = new Date(pos.timestamp);
+        return posDate >= startDate && posDate < endDate;
+      });
+
+      console.log('📊 Total posiciones después de filtrar:', positions.length);
+      if (positions.length > 0) {
+        console.log('🕐 Primera filtrada:', positions[0]?.timestamp);
+        console.log('🕐 Última filtrada:', positions[positions.length - 1]?.timestamp);
+      }
+    }
+
+    // Invertir para orden cronológico
     positions.reverse();
 
     res.json({
