@@ -4,6 +4,7 @@ const router = express.Router();
 const { db, admin } = require('../config/firebase');
 const { isValidPhone, sanitizeString } = require('../utils/validators');
 const bcrypt = require('bcrypt');
+const { generateToken } = require('../utils/jwt'); // ← NUEVO
 
 /**
  * POST /api/auth/register
@@ -11,7 +12,7 @@ const bcrypt = require('bcrypt');
  */
 router.post('/register', async (req, res) => {
   try {
-    const { telefono, nombre, apellido, password, rol, colegio_id } = req.body;
+    const { telefono, nombre, apellido, password, rol, empresa_id } = req.body;
 
     // Validaciones
     if (!telefono || !nombre || !apellido) {
@@ -72,7 +73,7 @@ router.post('/register', async (req, res) => {
       password: hashedPassword,
       rol: rol || 'padre',
       estado: rol && rol !== 'padre' ? 'activo' : 'pendiente',
-      colegio_id: colegio_id || null,
+      empresa_id: empresa_id || null,
       hijos: [],
       biometric_enabled: false,
       createdAt: new Date().toISOString(),
@@ -106,6 +107,7 @@ router.post('/register', async (req, res) => {
 /**
  * POST /api/auth/login
  * Login de usuario (por teléfono + contraseña)
+ * MODIFICADO: Ahora genera y devuelve JWT
  */
 router.post('/login', async (req, res) => {
   try {
@@ -173,9 +175,22 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // ========== NUEVO: Generar JWT ==========
+    const tokenPayload = {
+      userId: usuarioDoc.id,
+      telefono: usuario.telefono,
+      rol: usuario.rol || 'padre',
+      empresa_id: usuario.empresa_id || null
+    };
+
+    const token = generateToken(tokenPayload);
+    console.log('✅ Token JWT generado para:', usuario.nombre);
+    // =========================================
+
     res.json({
       success: true,
       message: 'Login exitoso',
+      token: token, // ← NUEVO: Devolver el token
       data: {
         uid: usuarioDoc.id,
         nombre: usuario.nombre,
@@ -183,9 +198,10 @@ router.post('/login', async (req, res) => {
         telefono: usuario.telefono,
         email: usuario.email || null,
         rol: usuario.rol || 'padre',
-        colegio_id: usuario.colegio_id || null,
+        empresa_id: usuario.empresa_id || null,
         estado: usuario.estado,
-        biometric_enabled: usuario.biometric_enabled || false
+        biometric_enabled: usuario.biometric_enabled || false,
+        permisos: usuario.permisos || null // ← NUEVO: Incluir permisos si existen
       }
     });
 
@@ -254,6 +270,7 @@ router.post('/enable-biometric', async (req, res) => {
 /**
  * POST /api/auth/verify-biometric
  * Verificar autenticación biométrica
+ * MODIFICADO: Ahora genera y devuelve JWT
  */
 router.post('/verify-biometric', async (req, res) => {
   try {
@@ -306,17 +323,30 @@ router.post('/verify-biometric', async (req, res) => {
       });
     }
 
+    // ========== NUEVO: Generar JWT ==========
+    const tokenPayload = {
+      userId: usuarioDoc.id,
+      telefono: usuario.telefono,
+      rol: usuario.rol || 'padre',
+      empresa_id: usuario.empresa_id || null
+    };
+
+    const token = generateToken(tokenPayload);
+    // =========================================
+
     res.json({
       success: true,
       message: 'Login biométrico exitoso',
+      token: token, // ← NUEVO
       data: {
         uid: usuarioDoc.id,
         nombre: usuario.nombre,
         apellido: usuario.apellido || '',
         telefono: usuario.telefono,
         rol: usuario.rol || 'padre',
-        colegio_id: usuario.colegio_id || null,
-        estado: usuario.estado
+        empresa_id: usuario.empresa_id || null,
+        estado: usuario.estado,
+        permisos: usuario.permisos || null // ← NUEVO
       }
     });
 
@@ -359,14 +389,14 @@ router.post('/verify-phone', async (req, res) => {
     if (userData.estado === 'rechazado') {
       return res.status(403).json({
         error: true,
-        message: 'Su solicitud de registro ha sido rechazada. Contacte al colegio.'
+        message: 'Su solicitud de registro ha sido rechazada. Contacte a la empresa.'
       });
     }
 
     if (userData.estado === 'pendiente') {
       return res.status(403).json({
         error: true,
-        message: 'Su solicitud está pendiente de aprobación por el colegio.'
+        message: 'Su solicitud está pendiente de aprobación por la empresa.'
       });
     }
 
@@ -380,7 +410,7 @@ router.post('/verify-phone', async (req, res) => {
         apellido: userData.apellido,
         rol: userData.rol,
         estado: userData.estado,
-        colegio_id: userData.colegio_id
+        empresa_id: userData.empresa_id
       }
     });
 

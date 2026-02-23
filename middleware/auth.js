@@ -1,8 +1,9 @@
 // middleware/auth.js
-const { admin } = require('../config/firebase');
+const { db } = require('../config/firebase');
+const { verifyToken: verifyJWT } = require('../utils/jwt');
 
 /**
- * Middleware para verificar token de Firebase
+ * Middleware para verificar JWT token
  */
 const verifyToken = async (req, res, next) => {
   try {
@@ -17,14 +18,16 @@ const verifyToken = async (req, res, next) => {
 
     const token = authHeader.split('Bearer ')[1];
 
-    // Verificar token con Firebase
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    // Verificar token JWT
+    const decoded = verifyJWT(token);
     
-    // Agregar info del usuario al request
+    // El token contiene: { userId, telefono, rol, empresa_id }
     req.user = {
-      uid: decodedToken.uid,
-      email: decodedToken.email,
-      phone: decodedToken.phone_number
+      uid: decoded.userId,
+      id: decoded.userId,
+      telefono: decoded.telefono,
+      rol: decoded.rol,
+      empresa_id: decoded.empresa_id
     };
 
     next();
@@ -39,28 +42,12 @@ const verifyToken = async (req, res, next) => {
 };
 
 /**
- * Middleware para verificar roles (opcional por ahora)
+ * Middleware para verificar roles
  */
 const checkRole = (allowedRoles) => {
   return async (req, res, next) => {
     try {
-      const { uid } = req.user;
-      
-      // Obtener usuario de Firestore
-      const userDoc = await admin.firestore()
-        .collection('usuarios')
-        .doc(uid)
-        .get();
-
-      if (!userDoc.exists) {
-        return res.status(404).json({
-          error: true,
-          message: 'User not found'
-        });
-      }
-
-      const userData = userDoc.data();
-      const userRole = userData.rol;
+      const userRole = req.user.rol;
 
       if (!allowedRoles.includes(userRole)) {
         return res.status(403).json({
@@ -69,7 +56,6 @@ const checkRole = (allowedRoles) => {
         });
       }
 
-      req.user.role = userRole;
       next();
     } catch (error) {
       console.error('Role check error:', error.message);
