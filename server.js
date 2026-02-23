@@ -133,11 +133,19 @@ try {
   console.error('❌ Error loading students routes:', error.message);
 }
 
+console.log('🔍 Cargando rutas de GPS...');
+console.log('🔍 Verificando archivo routes/gps.js...');
+
 try {
-  app.use('/api/gps', require('./routes/gps'));
-  console.log('✅ GPS routes loaded');
+  const gpsRoutes = require('./routes/gps');
+  console.log('✅ Archivo GPS cargado, tipo:', typeof gpsRoutes);
+  console.log('✅ GPS routes:', gpsRoutes);
+  
+  app.use('/api/gps', gpsRoutes);
+  console.log('✅ GPS routes registered');
 } catch (error) {
   console.error('❌ Error loading GPS routes:', error.message);
+  console.error('❌ Stack:', error.stack);
 }
 
 try {
