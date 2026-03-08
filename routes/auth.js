@@ -198,7 +198,8 @@ router.post('/login', async (req, res) => {
         telefono: usuario.telefono,
         email: usuario.email || null,
         rol: usuario.rol || 'padre',
-        empresa_id: usuario.empresa_id || null,
+       // empresa_id: usuario.empresa_id || null,
+        colegio_id: usuario.colegio_id,
         estado: usuario.estado,
         biometric_enabled: usuario.biometric_enabled || false,
         permisos: usuario.permisos || null // ← NUEVO: Incluir permisos si existen
