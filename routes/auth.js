@@ -409,6 +409,7 @@ router.post('/verify-phone', async (req, res) => {
         nombre: userData.nombre,
         apellido: userData.apellido,
         rol: userData.rol,
+        colegio_id: userData.colegio_id,  
         estado: userData.estado,
         empresa_id: userData.empresa_id
       }
