@@ -184,6 +184,13 @@ try {
   console.error('❌ Error loading usuarios routes:', error.message);
 }
 
+try {
+  app.use('/api/eventos', require('./routes/eventos'));
+  console.log('✅ Eventos routes loaded');
+} catch (error) {
+  console.error('❌ Error loading eventos routes:', error.message);
+}
+
 console.log('✅ All routes loaded');
 
 // Routes (vamos a crearlas paso a paso)
