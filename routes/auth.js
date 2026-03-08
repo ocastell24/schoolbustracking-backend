@@ -344,7 +344,7 @@ router.post('/verify-biometric', async (req, res) => {
         apellido: usuario.apellido || '',
         telefono: usuario.telefono,
         rol: usuario.rol || 'padre',
-        colegio_id: userData.colegio_id,  // ← AGREGAR ESTA
+        colegio_id: usuario.colegio_id,  // ← AGREGAR ESTA
         // empresa_id: usuario.empresa_id || null,
         estado: usuario.estado,
         permisos: usuario.permisos || null // ← NUEVO
