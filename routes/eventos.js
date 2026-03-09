@@ -28,7 +28,9 @@ router.post('/llegada', verifyToken, upload.single('foto'), async (req, res) => 
   try {
     const { bus_id, colegio_id, latitude, longitude } = req.body;
     const file = req.file;
-    const userId = req.user.userId;
+    const userId = req.user.userId || req.user.uid || null;
+    console.log('👤 Usuario del token:', req.user);
+    console.log('👤 userId extraído:', userId);
 
     console.log('📸 Registrando llegada:', { bus_id, colegio_id });
 
@@ -138,7 +140,7 @@ router.get('/llegadas/:colegio_id', verifyToken, async (req, res) => {
 
     // Determinar rango de fechas
     let startDate, endDate;
-    
+
     if (fecha_inicio && fecha_fin) {
       // Rango personalizado
       startDate = new Date(fecha_inicio + 'T05:00:00.000Z'); // 00:00 Peru
