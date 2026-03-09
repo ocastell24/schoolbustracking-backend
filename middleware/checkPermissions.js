@@ -22,7 +22,7 @@ const checkCamionAccess = async (req, res, next) => {
     const user = userDoc.data();
     
     // Super admin tiene acceso a todo
-    if (user.rol === 'super_admin') {
+    if (user.rol === 'superadmin') {
       return next();
     }
     
