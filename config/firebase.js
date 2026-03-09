@@ -17,9 +17,10 @@ try {
 try {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`
+    databaseURL: "https://schoolbustracking.firebaseio.com",
+    storageBucket: "schoolbustracking-49920.firebasestorage.app"  // ← AGREGAR ESTA LÍNEA
   });
-  
+
   console.log('✅ Firebase Admin initialized successfully');
 } catch (error) {
   console.error('❌ Error initializing Firebase Admin:', error.message);
