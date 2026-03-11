@@ -8,40 +8,40 @@ const checkCamionAccess = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const camionId = req.params.id || req.params.camionId || req.query.bus_id || req.query.camion_id;
-    
+
     // Obtener datos del usuario
     const userDoc = await db.collection('usuarios').doc(userId).get();
-    
+
     if (!userDoc.exists) {
       return res.status(404).json({
         error: true,
         message: 'Usuario no encontrado'
       });
     }
-    
+
     const user = userDoc.data();
-    
+
     // Super admin tiene acceso a todo
     if (user.rol === 'superadmin') {
       return next();
     }
-    
-    // Admin tiene acceso a todos los camiones de su empresa
+
+    // Admin tiene acceso a todos los buses de su colegio
     if (user.rol === 'admin') {
-      // Verificar que el camión pertenezca a su empresa
+      // Verificar que el bus pertenezca a su colegio
       if (camionId) {
-        const camionDoc = await db.collection('camiones').doc(camionId).get();
-        if (camionDoc.exists && camionDoc.data().empresa_id === user.empresa_id) {
+        const busDoc = await db.collection('buses').doc(camionId).get();
+        if (busDoc.exists && busDoc.data().colegio_id === user.colegio_id) {
           return next();
         }
         return res.status(403).json({
           error: true,
-          message: 'No tienes permiso para acceder a este camión'
+          message: 'No tienes permiso para acceder a este bus'
         });
       }
       return next();
     }
-    
+
     // Viewer con permisos temporales
     if (user.rol === 'viewer') {
       if (!user.permisos) {
@@ -50,7 +50,7 @@ const checkCamionAccess = async (req, res, next) => {
           message: 'No tienes permisos configurados'
         });
       }
-      
+
       // Verificar si está activo
       if (!user.permisos.activo) {
         return res.status(403).json({
@@ -58,25 +58,25 @@ const checkCamionAccess = async (req, res, next) => {
           message: 'Tu acceso ha sido desactivado'
         });
       }
-      
+
       // Verificar expiración
       const now = new Date();
       const expiracion = new Date(user.permisos.fecha_expiracion);
-      
+
       if (now > expiracion) {
         // Desactivar automáticamente
         await db.collection('usuarios').doc(userId).update({
           'permisos.activo': false,
           estado: 'inactivo'
         });
-        
+
         return res.status(403).json({
           error: true,
           message: 'Tu acceso ha expirado',
           expiro: true
         });
       }
-      
+
       // Verificar si tiene acceso a este camión específico
       if (camionId && !user.permisos.camiones_permitidos.includes(camionId)) {
         return res.status(403).json({
@@ -84,17 +84,17 @@ const checkCamionAccess = async (req, res, next) => {
           message: 'No tienes permiso para ver este camión'
         });
       }
-      
+
       // Todo OK
       return next();
     }
-    
+
     // Rol no reconocido
     return res.status(403).json({
       error: true,
       message: 'Rol no reconocido'
     });
-    
+
   } catch (error) {
     console.error('❌ Error en checkCamionAccess:', error);
     return res.status(500).json({
