@@ -5,34 +5,46 @@ const { db, admin } = require('../config/firebase');
 const { verifyToken } = require('../middleware/auth');
 const multer = require('multer');
 
-// Configurar multer para manejar uploads
+// Configurar multer para manejar uploads de foto y video
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB máximo
+    fileSize: 100 * 1024 * 1024, // 100MB máximo (para videos)
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    console.log('📁 Mimetype recibido:', file.mimetype);
+    const allowed = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+      'video/mp4', 'video/quicktime', 'video/webm',
+      'video/3gpp', 'video/3gpp2', 'video/x-msvideo', 'video/mpeg'
+    ];
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/') || allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Solo se permiten imágenes'));
+      cb(new Error(`Tipo de archivo no permitido: ${file.mimetype}`));
     }
   }
 });
 
 /**
  * POST /api/eventos/llegada
- * Registrar llegada al colegio con foto
+ * Registrar llegada al colegio con foto o video
  */
-router.post('/llegada', verifyToken, upload.single('foto'), async (req, res) => {
+router.post('/llegada', verifyToken, upload.fields([
+  { name: 'foto', maxCount: 1 },
+  { name: 'video', maxCount: 1 }
+]), async (req, res) => {
   try {
-    const { bus_id, colegio_id, latitude, longitude } = req.body;
-    const file = req.file;
+    const { bus_id, colegio_id, latitude, longitude, tipo } = req.body;
     const userId = req.user.userId || req.user.uid || null;
     console.log('👤 Usuario del token:', req.user);
     console.log('👤 userId extraído:', userId);
 
-    console.log('📸 Registrando llegada:', { bus_id, colegio_id });
+    // Detectar si llegó foto o video
+    const file = req.files?.['foto']?.[0] || req.files?.['video']?.[0];
+    const tipoArchivo = tipo || (req.files?.['foto'] ? 'foto' : 'video');
+
+    console.log(`📸 Registrando llegada (${tipoArchivo}):`, { bus_id, colegio_id });
 
     // Validaciones
     if (!bus_id || !colegio_id) {
@@ -45,7 +57,7 @@ router.post('/llegada', verifyToken, upload.single('foto'), async (req, res) => 
     if (!file) {
       return res.status(400).json({
         error: true,
-        message: 'Foto es requerida'
+        message: 'Foto o video es requerido'
       });
     }
 
@@ -60,10 +72,15 @@ router.post('/llegada', verifyToken, upload.single('foto'), async (req, res) => 
 
     const busData = busDoc.data();
 
-    // Subir foto a Firebase Storage
+    // Determinar extensión según tipo
+    const esVideo = tipoArchivo === 'video' || file.mimetype.startsWith('video/');
+    const extension = esVideo ? 'mp4' : 'jpg';
+    const carpeta = esVideo ? 'llegadas_video' : 'llegadas';
+
+    // Subir archivo a Firebase Storage
     const bucket = admin.storage().bucket();
     const timestamp = Date.now();
-    const filename = `llegadas/${colegio_id}/${bus_id}_${timestamp}.jpg`;
+    const filename = `${carpeta}/${colegio_id}/${bus_id}_${timestamp}.${extension}`;
     const blob = bucket.file(filename);
 
     const blobStream = blob.createWriteStream({
@@ -72,6 +89,7 @@ router.post('/llegada', verifyToken, upload.single('foto'), async (req, res) => 
         metadata: {
           bus_id: bus_id,
           colegio_id: colegio_id,
+          tipo: tipoArchivo,
           timestamp: new Date().toISOString()
         }
       }
@@ -86,9 +104,9 @@ router.post('/llegada', verifyToken, upload.single('foto'), async (req, res) => 
     // Hacer el archivo público
     await blob.makePublic();
 
-    const foto_url = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+    const archivo_url = `https://storage.googleapis.com/${bucket.name}/${filename}`;
 
-    console.log('✅ Foto subida:', foto_url);
+    console.log(`✅ ${esVideo ? 'Video' : 'Foto'} subido:`, archivo_url);
 
     // Guardar evento en Firestore
     const llegadaData = {
@@ -96,7 +114,10 @@ router.post('/llegada', verifyToken, upload.single('foto'), async (req, res) => 
       colegio_id,
       conductor_id: userId,
       bus_placa: busData.placa || 'N/A',
-      foto_url,
+      tipo: tipoArchivo,                          // 'foto' | 'video'
+      foto_url: esVideo ? null : archivo_url,     // compatibilidad con código anterior
+      video_url: esVideo ? archivo_url : null,
+      archivo_url,                                // campo unificado
       latitude: latitude ? parseFloat(latitude) : null,
       longitude: longitude ? parseFloat(longitude) : null,
       timestamp: new Date().toISOString(),
@@ -109,10 +130,13 @@ router.post('/llegada', verifyToken, upload.single('foto'), async (req, res) => 
 
     res.json({
       success: true,
-      message: 'Llegada registrada exitosamente',
+      message: `Llegada registrada exitosamente (${tipoArchivo})`,
       data: {
         id: llegadaRef.id,
-        foto_url,
+        tipo: tipoArchivo,
+        archivo_url,
+        foto_url: llegadaData.foto_url,
+        video_url: llegadaData.video_url,
         timestamp: llegadaData.timestamp
       }
     });
@@ -142,12 +166,10 @@ router.get('/llegadas/:colegio_id', verifyToken, async (req, res) => {
     let startDate, endDate;
 
     if (fecha_inicio && fecha_fin) {
-      // Rango personalizado
-      startDate = new Date(fecha_inicio + 'T05:00:00.000Z'); // 00:00 Peru
+      startDate = new Date(fecha_inicio + 'T05:00:00.000Z');
       endDate = new Date(fecha_fin + 'T04:59:59.999Z');
       endDate.setDate(endDate.getDate() + 1);
     } else {
-      // Por defecto: hoy
       const now = new Date();
       const peruTime = new Date(now.getTime() + (-5 * 60 * 60 * 1000));
       const today = peruTime.toISOString().split('T')[0];
@@ -158,7 +180,6 @@ router.get('/llegadas/:colegio_id', verifyToken, async (req, res) => {
 
     console.log('📅 Rango:', startDate.toISOString(), 'a', endDate.toISOString());
 
-    // Obtener llegadas
     const snapshot = await db.collection('llegadas')
       .where('colegio_id', '==', colegio_id)
       .where('timestamp', '>=', startDate.toISOString())
@@ -168,10 +189,7 @@ router.get('/llegadas/:colegio_id', verifyToken, async (req, res) => {
 
     const llegadas = [];
     snapshot.forEach(doc => {
-      llegadas.push({
-        id: doc.id,
-        ...doc.data()
-      });
+      llegadas.push({ id: doc.id, ...doc.data() });
     });
 
     console.log('✅ Llegadas encontradas:', llegadas.length);
@@ -209,10 +227,7 @@ router.get('/llegadas/bus/:bus_id', verifyToken, async (req, res) => {
 
     const llegadas = [];
     snapshot.forEach(doc => {
-      llegadas.push({
-        id: doc.id,
-        ...doc.data()
-      });
+      llegadas.push({ id: doc.id, ...doc.data() });
     });
 
     res.json({
