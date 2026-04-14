@@ -15,7 +15,6 @@ router.get('/me/bus', checkRole(['conductor']), async (req, res) => {
 
     console.log('🚌 Buscando bus del conductor:', conductorId);
 
-    // Buscar bus asignado al conductor
     const busesSnapshot = await db.collection('buses')
       .where('conductor_id', '==', conductorId)
       .where('estado', '==', 'activo')
@@ -63,7 +62,6 @@ router.get('/me/alumnos', checkRole(['conductor']), async (req, res) => {
 
     console.log('👨‍👩‍👧‍👦 Buscando alumnos del conductor:', conductorId);
 
-    // Buscar bus del conductor
     const busesSnapshot = await db.collection('buses')
       .where('conductor_id', '==', conductorId)
       .where('estado', '==', 'activo')
@@ -80,7 +78,6 @@ router.get('/me/alumnos', checkRole(['conductor']), async (req, res) => {
     const busId = busesSnapshot.docs[0].id;
     console.log('🚌 Bus ID:', busId);
 
-    // Buscar alumnos del bus
     const alumnosSnapshot = await db.collection('alumnos')
       .where('bus_id', '==', busId)
       .where('estado', '==', 'activo')
@@ -115,13 +112,14 @@ router.get('/me/alumnos', checkRole(['conductor']), async (req, res) => {
 /**
  * POST /api/conductores/asistencia
  * Marcar asistencia de un alumno
+ * Campo nuevo: ruta ('ida' | 'regreso')
  */
 router.post('/asistencia', checkRole(['conductor']), async (req, res) => {
   try {
-    const { alumno_id, tipo } = req.body;
+    const { alumno_id, tipo, ruta } = req.body; // ruta: 'ida' | 'regreso'
     const conductorId = req.user.id;
 
-    console.log('📝 Registrando asistencia:', { alumno_id, tipo, conductorId });
+    console.log('📝 Registrando asistencia:', { alumno_id, tipo, ruta, conductorId });
 
     if (!alumno_id || !tipo) {
       return res.status(400).json({
@@ -137,7 +135,9 @@ router.post('/asistencia', checkRole(['conductor']), async (req, res) => {
       });
     }
 
-    // Verificar que el conductor tenga un bus
+    // ruta es opcional por compatibilidad con registros anteriores
+    const rutaValida = ['ida', 'regreso'].includes(ruta) ? ruta : 'ida';
+
     const busesSnapshot = await db.collection('buses')
       .where('conductor_id', '==', conductorId)
       .limit(1)
@@ -154,7 +154,6 @@ router.post('/asistencia', checkRole(['conductor']), async (req, res) => {
     const busId = busDoc.id;
     const bus = busDoc.data();
 
-    // Verificar que el alumno esté en el bus
     const alumnoDoc = await db.collection('alumnos').doc(alumno_id).get();
 
     if (!alumnoDoc.exists) {
@@ -173,13 +172,14 @@ router.post('/asistencia', checkRole(['conductor']), async (req, res) => {
       });
     }
 
-    // Crear registro de asistencia
+    // Crear registro de asistencia con campo ruta
     const asistenciaData = {
-      alumno_id: alumno_id,
+      alumno_id,
       alumno_nombre: `${alumno.nombre} ${alumno.apellido || ''}`,
       bus_id: busId,
       conductor_id: conductorId,
-      tipo: tipo,
+      tipo,           // 'subida' | 'bajada'
+      ruta: rutaValida, // 'ida' | 'regreso'
       fecha: new Date().toISOString(),
       timestamp: new Date().getTime()
     };
@@ -190,7 +190,7 @@ router.post('/asistencia', checkRole(['conductor']), async (req, res) => {
 
     // Enviar notificación al padre
     console.log('📨 Enviando notificación al padre...');
-    
+
     if (tipo === 'subida') {
       await notificationService.notifyStudentPickup(alumno_id, bus.placa);
       console.log('✅ Notificación de subida enviada');
@@ -201,7 +201,7 @@ router.post('/asistencia', checkRole(['conductor']), async (req, res) => {
 
     res.json({
       success: true,
-      message: `Asistencia de ${tipo} registrada`,
+      message: `Asistencia de ${tipo} registrada (${rutaValida})`,
       data: {
         id: asistenciaRef.id,
         ...asistenciaData
