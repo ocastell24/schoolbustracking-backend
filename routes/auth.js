@@ -12,7 +12,7 @@ const { generateToken } = require('../utils/jwt'); // ← NUEVO
  */
 router.post('/register', async (req, res) => {
   try {
-    const { telefono, nombre, apellido, password, rol, empresa_id } = req.body;
+    const { telefono, nombre, apellido, password, rol, empresa_id, colegio_id, hijos } = req.body;
 
     // Validaciones
     if (!telefono || !nombre || !apellido) {
@@ -74,7 +74,8 @@ router.post('/register', async (req, res) => {
       rol: rol || 'padre',
       estado: rol && rol !== 'padre' ? 'activo' : 'pendiente',
       empresa_id: empresa_id || null,
-      hijos: [],
+      colegio_id: colegio_id || null,
+      hijos: hijos || [],
       biometric_enabled: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -157,7 +158,7 @@ router.post('/login', async (req, res) => {
     }
 
     const passwordMatch = await bcrypt.compare(password, usuario.password);
-    
+
     if (!passwordMatch) {
       console.log('❌ Contraseña incorrecta');
       return res.status(401).json({
@@ -198,7 +199,7 @@ router.post('/login', async (req, res) => {
         telefono: usuario.telefono,
         email: usuario.email || null,
         rol: usuario.rol || 'padre',
-       // empresa_id: usuario.empresa_id || null,
+        // empresa_id: usuario.empresa_id || null,
         colegio_id: usuario.colegio_id,
         estado: usuario.estado,
         biometric_enabled: usuario.biometric_enabled || false,
@@ -411,9 +412,9 @@ router.post('/verify-phone', async (req, res) => {
         nombre: userData.nombre,
         apellido: userData.apellido,
         rol: userData.rol,
-        colegio_id: userData.colegio_id,  
+        colegio_id: userData.colegio_id,
         estado: userData.estado
-       // empresa_id: userData.empresa_id
+        // empresa_id: userData.empresa_id
       }
     });
 
@@ -434,7 +435,7 @@ router.post('/verify-phone', async (req, res) => {
 router.get('/me', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader) {
       return res.status(401).json({
         error: true,
@@ -444,9 +445,9 @@ router.get('/me', async (req, res) => {
 
     const token = authHeader.split('Bearer ')[1];
     const decodedToken = await admin.auth().verifyIdToken(token);
-    
+
     const userDoc = await db.collection('usuarios').doc(decodedToken.uid).get();
-    
+
     if (!userDoc.exists) {
       return res.status(404).json({
         error: true,
