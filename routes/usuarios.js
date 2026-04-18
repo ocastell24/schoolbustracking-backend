@@ -67,7 +67,7 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    const allowedFields = ['nombre', 'apellido', 'telefono', 'rol', 'colegio_id', 'estado'];
+    const allowedFields = ['nombre', 'apellido', 'telefono', 'rol', 'colegio_id', 'estado', 'hijos'];
     const updateData = {};
 
     for (const field of allowedFields) {
