@@ -217,6 +217,7 @@ router.put('/:id', /* verifyToken, */ async (req, res) => {
     const allowedFields = [
       'nombre', 'apellido', 'fecha_nacimiento',
       'grado', 'seccion', 'bus_id',
+       'colegio_id',
       'direccion_recogida', 'direccion_entrega',
       'telefono_contacto',
       'ubicacion_lat', 'ubicacion_lng',  // ← AGREGAR
