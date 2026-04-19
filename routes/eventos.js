@@ -322,6 +322,44 @@ router.get('/salidas/bus/:bus_id', verifyToken, async (req, res) => {
   }
 });
 
+router.get('/salidas/:colegio_id', verifyToken, async (req, res) => {
+  try {
+    const { colegio_id } = req.params;
+    const { fecha_inicio, fecha_fin } = req.query;
+
+    let startDate, endDate;
+    if (fecha_inicio && fecha_fin) {
+      startDate = new Date(fecha_inicio + 'T05:00:00.000Z');
+      endDate = new Date(fecha_fin + 'T04:59:59.999Z');
+      endDate.setDate(endDate.getDate() + 1);
+    } else {
+      const now = new Date();
+      const peruTime = new Date(now.getTime() + (-5 * 60 * 60 * 1000));
+      const today = peruTime.toISOString().split('T')[0];
+      startDate = new Date(today + 'T05:00:00.000Z');
+      endDate = new Date(today + 'T04:59:59.999Z');
+      endDate.setDate(endDate.getDate() + 1);
+    }
+
+    const snapshot = await db.collection('salidas')
+      .where('colegio_id', '==', colegio_id)
+      .where('timestamp', '>=', startDate.toISOString())
+      .where('timestamp', '<=', endDate.toISOString())
+      .orderBy('timestamp', 'desc')
+      .get();
+
+    const salidas = [];
+    snapshot.forEach(doc => salidas.push({ id: doc.id, ...doc.data() }));
+
+    res.json({ success: true, count: salidas.length, data: salidas });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo salidas:', error);
+    res.status(500).json({ error: true, message: 'Error al obtener salidas', details: error.message });
+  }
+});
+
+
 /**
  * GET /api/eventos/entregas/bus/:bus_id
  * Obtener entregas de alumnos de un bus (del día)
