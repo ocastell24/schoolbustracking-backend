@@ -192,10 +192,10 @@ router.post('/asistencia', checkRole(['conductor']), async (req, res) => {
     console.log('📨 Enviando notificación al padre...');
 
     if (tipo === 'subida') {
-      await notificationService.notifyStudentPickup(alumno_id, bus.placa);
+    await notificationService.notifyStudentPickup(alumno_id, bus.placa, rutaValida);
       console.log('✅ Notificación de subida enviada');
     } else if (tipo === 'bajada') {
-      await notificationService.notifyStudentDropoff(alumno_id, bus.placa);
+  await notificationService.notifyStudentDropoff(alumno_id, bus.placa, rutaValida);
       console.log('✅ Notificación de bajada enviada');
     }
 
