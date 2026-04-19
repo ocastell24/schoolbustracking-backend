@@ -516,4 +516,98 @@ router.post('/update-fcm-token', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/auth/change-password
+ * El usuario cambia su propia contraseña
+ */
+router.post('/change-password', async (req, res) => {
+  try {
+    const { telefono, password_actual, password_nueva } = req.body;
+
+    if (!telefono || !password_actual || !password_nueva) {
+      return res.status(400).json({
+        error: true,
+        message: 'Teléfono, contraseña actual y nueva son requeridos'
+      });
+    }
+
+    if (password_nueva.length < 6) {
+      return res.status(400).json({
+        error: true,
+        message: 'La nueva contraseña debe tener al menos 6 caracteres'
+      });
+    }
+
+    const snapshot = await db.collection('usuarios')
+      .where('telefono', '==', telefono)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({ error: true, message: 'Usuario no encontrado' });
+    }
+
+    const usuarioDoc = snapshot.docs[0];
+    const usuario = usuarioDoc.data();
+
+    const passwordMatch = await bcrypt.compare(password_actual, usuario.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: true, message: 'Contraseña actual incorrecta' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password_nueva, 10);
+    await db.collection('usuarios').doc(usuarioDoc.id).update({
+      password: hashedPassword,
+      updatedAt: new Date().toISOString()
+    });
+
+    res.json({ success: true, message: 'Contraseña actualizada exitosamente' });
+
+  } catch (error) {
+    console.error('❌ Change password error:', error);
+    res.status(500).json({ error: true, message: 'Error al cambiar contraseña', details: error.message });
+  }
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Admin resetea la contraseña de un usuario
+ */
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { usuario_id, password_nueva } = req.body;
+
+    if (!usuario_id || !password_nueva) {
+      return res.status(400).json({
+        error: true,
+        message: 'usuario_id y password_nueva son requeridos'
+      });
+    }
+
+    if (password_nueva.length < 6) {
+      return res.status(400).json({
+        error: true,
+        message: 'La contraseña debe tener al menos 6 caracteres'
+      });
+    }
+
+    const usuarioDoc = await db.collection('usuarios').doc(usuario_id).get();
+    if (!usuarioDoc.exists) {
+      return res.status(404).json({ error: true, message: 'Usuario no encontrado' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password_nueva, 10);
+    await db.collection('usuarios').doc(usuario_id).update({
+      password: hashedPassword,
+      updatedAt: new Date().toISOString()
+    });
+
+    res.json({ success: true, message: 'Contraseña reseteada exitosamente' });
+
+  } catch (error) {
+    console.error('❌ Reset password error:', error);
+    res.status(500).json({ error: true, message: 'Error al resetear contraseña', details: error.message });
+  }
+});
+
 module.exports = router;
