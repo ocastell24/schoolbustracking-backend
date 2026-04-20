@@ -150,15 +150,20 @@ router.get('/asistencias', async (req, res) => {
   try {
     const { fecha, colegio_id } = req.query;
 
+    // Obtener buses del colegio primero
+    let busIds = [];
+    if (colegio_id) {
+      const busesSnapshot = await db.collection('buses')
+        .where('colegio_id', '==', colegio_id)
+        .get();
+      busIds = busesSnapshot.docs.map(doc => doc.id);
+    }
+
+    // Filtrar por fecha
     let query = db.collection('asistencias');
-
-    // Filtrar por fecha si se proporciona
     if (fecha) {
-      const startDate = new Date(fecha);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(fecha);
-      endDate.setHours(23, 59, 59, 999);
-
+      const startDate = new Date(fecha + 'T00:00:00.000Z');
+      const endDate = new Date(fecha + 'T23:59:59.999Z');
       query = query
         .where('timestamp', '>=', startDate.getTime())
         .where('timestamp', '<=', endDate.getTime());
@@ -168,38 +173,34 @@ router.get('/asistencias', async (req, res) => {
 
     let asistencias = [];
     snapshot.forEach(doc => {
-      asistencias.push({
-        id: doc.id,
-        ...doc.data()
-      });
+      asistencias.push({ id: doc.id, ...doc.data() });
     });
 
-    // Si hay filtro de colegio, filtrar por bus_id del colegio
-    if (colegio_id) {
-      // Obtener buses del colegio
-      const busesSnapshot = await db.collection('buses')
-        .where('colegio_id', '==', colegio_id)
-        .get();
-      
-      const busIds = busesSnapshot.docs.map(doc => doc.id);
-      
-      // Filtrar asistencias por buses del colegio
+    // Filtrar por colegio
+    if (busIds.length > 0) {
       asistencias = asistencias.filter(a => busIds.includes(a.bus_id));
     }
 
-    res.json({
-      success: true,
-      count: asistencias.length,
-      data: asistencias
-    });
+    // Agregar alumno_info
+    for (let a of asistencias) {
+      if (a.alumno_id) {
+        const alumnoDoc = await db.collection('alumnos').doc(a.alumno_id).get();
+        if (alumnoDoc.exists) {
+          const alumno = alumnoDoc.data();
+          a.alumno_info = {
+            nombre: alumno.nombre,
+            grado: alumno.grado,
+            seccion: alumno.seccion
+          };
+        }
+      }
+    }
+
+    res.json({ success: true, count: asistencias.length, data: asistencias });
 
   } catch (error) {
     console.error('Error obteniendo asistencias:', error);
-    res.status(500).json({
-      error: true,
-      message: 'Error obteniendo asistencias',
-      details: error.message
-    });
+    res.status(500).json({ error: true, message: 'Error obteniendo asistencias', details: error.message });
   }
 });
 
