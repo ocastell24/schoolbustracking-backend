@@ -14,7 +14,8 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     console.log('📁 Mimetype recibido:', file.mimetype);
     const allowed = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+      'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
+      'application/octet-stream',
       'video/mp4', 'video/quicktime', 'video/webm',
       'video/3gpp', 'video/3gpp2', 'video/x-msvideo', 'video/mpeg'
     ];
