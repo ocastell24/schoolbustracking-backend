@@ -133,7 +133,7 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    const allowedFields = ['nombre', 'direccion', 'telefono', 'estado'];
+const allowedFields = ['nombre', 'direccion', 'telefono', 'estado', 'horarios_mapa'];
     const updateData = {};
 
     for (const field of allowedFields) {
