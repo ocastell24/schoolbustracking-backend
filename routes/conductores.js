@@ -218,4 +218,41 @@ router.post('/asistencia', checkRole(['conductor']), async (req, res) => {
   }
 });
 
+
+/**
+ * GET /api/conductores/asistencias/hoy
+ * Obtener asistencias registradas hoy por el conductor
+ */
+router.get('/asistencias/hoy', checkRole(['conductor']), async (req, res) => {
+  try {
+    const conductorId = req.user.id;
+    const { ruta } = req.query;
+
+    const hoyInicio = new Date();
+    hoyInicio.setHours(0, 0, 0, 0);
+    const hoyFin = new Date();
+    hoyFin.setHours(23, 59, 59, 999);
+
+    let query = db.collection('asistencias')
+      .where('conductor_id', '==', conductorId)
+      .where('timestamp', '>=', hoyInicio.getTime())
+      .where('timestamp', '<=', hoyFin.getTime());
+
+    if (ruta) query = query.where('ruta', '==', ruta);
+
+    const snapshot = await query.get();
+
+    const asistencias = [];
+    snapshot.forEach(doc => {
+      asistencias.push({ id: doc.id, ...doc.data() });
+    });
+
+    res.json({ success: true, data: asistencias });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo asistencias de hoy:', error);
+    res.status(500).json({ error: true, message: error.message });
+  }
+});
+
 module.exports = router;
