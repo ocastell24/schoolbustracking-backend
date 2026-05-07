@@ -26,12 +26,8 @@ class NotificationService {
       // Construir mensaje
       const message = {
         token: fcmToken,
-     //   notification: {
-     //     title: title,
-     //     body: body
-     //   },
         data: {
-          title: title,        // 👈 mueve title y body a data
+          title: title,
           body: body,
           ...data,
           click_action: 'FLUTTER_NOTIFICATION_CLICK'
@@ -39,6 +35,8 @@ class NotificationService {
         android: {
           priority: 'high',
           notification: {
+            title: title,
+            body: body,
             sound: 'default',
             channelId: 'schoolbus_notifications'
           }
@@ -47,7 +45,11 @@ class NotificationService {
           payload: {
             aps: {
               sound: 'default',
-              badge: 1
+              badge: 1,
+              alert: {
+                title: title,
+                body: body
+              }
             }
           }
         }
@@ -64,7 +66,7 @@ class NotificationService {
 
       // Si el token es inválido, limpiarlo de la base de datos
       if (error.code === 'messaging/invalid-registration-token' ||
-          error.code === 'messaging/registration-token-not-registered') {
+        error.code === 'messaging/registration-token-not-registered') {
         await admin.firestore().collection('usuarios').doc(userId).update({
           fcm_token: null
         });
