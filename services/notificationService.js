@@ -26,17 +26,17 @@ class NotificationService {
       // Construir mensaje
       const message = {
         token: fcmToken,
-        data: {
+        notification: {
           title: title,
-          body: body,
+          body: body
+        },
+        data: {
           ...data,
           click_action: 'FLUTTER_NOTIFICATION_CLICK'
         },
         android: {
           priority: 'high',
           notification: {
-            title: title,
-            body: body,
             sound: 'default',
             channelId: 'schoolbus_notifications'
           }
@@ -45,11 +45,7 @@ class NotificationService {
           payload: {
             aps: {
               sound: 'default',
-              badge: 1,
-              alert: {
-                title: title,
-                body: body
-              }
+              badge: 1
             }
           }
         }
