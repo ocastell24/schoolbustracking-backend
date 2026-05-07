@@ -26,11 +26,13 @@ class NotificationService {
       // Construir mensaje
       const message = {
         token: fcmToken,
-        notification: {
-          title: title,
-          body: body
-        },
+     //   notification: {
+     //     title: title,
+     //     body: body
+     //   },
         data: {
+          title: title,        // 👈 mueve title y body a data
+          body: body,
           ...data,
           click_action: 'FLUTTER_NOTIFICATION_CLICK'
         },
