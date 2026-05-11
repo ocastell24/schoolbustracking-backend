@@ -229,15 +229,26 @@ router.get('/asistencias/hoy', checkRole(['conductor']), async (req, res) => {
     const conductorId = req.user.id;
     const { ruta } = req.query;
 
-    const hoyInicio = new Date();
+    // Usar hora de Lima (UTC-5)
+    const ahora = new Date();
+    const offsetLima = -5 * 60; // UTC-5 en minutos
+    const offsetLocal = ahora.getTimezoneOffset();
+    const diffMs = (offsetLocal + offsetLima) * 60 * 1000;
+
+    const ahoraLima = new Date(ahora.getTime() + diffMs);
+    const hoyInicio = new Date(ahoraLima);
     hoyInicio.setHours(0, 0, 0, 0);
-    const hoyFin = new Date();
+    const hoyFin = new Date(ahoraLima);
     hoyFin.setHours(23, 59, 59, 999);
+
+    // Convertir de vuelta a UTC para comparar con timestamps
+    const hoyInicioUTC = new Date(hoyInicio.getTime() - diffMs);
+    const hoyFinUTC = new Date(hoyFin.getTime() - diffMs);
 
     let query = db.collection('asistencias')
       .where('conductor_id', '==', conductorId)
-      .where('timestamp', '>=', hoyInicio.getTime())
-      .where('timestamp', '<=', hoyFin.getTime());
+      .where('timestamp', '>=', hoyInicioUTC.getTime())
+      .where('timestamp', '<=', hoyFinUTC.getTime());
 
     if (ruta) query = query.where('ruta', '==', ruta);
 
