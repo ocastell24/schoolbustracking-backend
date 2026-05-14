@@ -194,6 +194,13 @@ try {
   console.error('❌ Error loading eventos routes:', error.message);
 }
 
+try {
+  app.use('/api/chat', require('./routes/chat'));
+  console.log('✅ Chat routes loaded');
+} catch (error) {
+  console.error('❌ Error loading chat routes:', error.message);
+}
+
 console.log('✅ All routes loaded');
 
 // Routes (vamos a crearlas paso a paso)

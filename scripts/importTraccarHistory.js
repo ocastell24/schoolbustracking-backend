@@ -3,7 +3,7 @@ const axios = require('axios');
 const { db } = require('../config/firebase');
 
 const TRACCAR_URL = process.env.TRACCAR_URL || 'http://34.173.106.142:8082';
-const TRACCAR_USER = process.env.TRACCAR_USER || 'admin@example.com';
+const TRACCAR_USER = process.env.TRACCAR_USER || 'ocastell24@gmail.com';
 const TRACCAR_PASSWORD = process.env.TRACCAR_PASSWORD || 'admin';
 
 /**
