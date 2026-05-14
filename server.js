@@ -21,7 +21,8 @@ app.use(cors({
     'https://schoolbustracking-frontend-sl0q7wbmp-oscars-projects-f3afc9a2.vercel.app',
     'https://localhost',
     'capacitor://localhost',
-    'http://localhost'
+    'http://localhost',
+     'https://sbt.ontastruck.com'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
