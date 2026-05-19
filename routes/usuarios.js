@@ -67,7 +67,22 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    const allowedFields = ['nombre', 'apellido', 'telefono', 'rol', 'colegio_id', 'estado', 'hijos'];
+    // Validar teléfono duplicado si se está cambiando
+if (updates.telefono && updates.telefono !== usuarioDoc.data().telefono) {
+  const telefonoExistente = await db.collection('usuarios')
+    .where('telefono', '==', updates.telefono)
+    .limit(1)
+    .get();
+
+  if (!telefonoExistente.empty) {
+    return res.status(409).json({
+      error: true,
+      message: 'El número de teléfono ya está registrado en otro usuario'
+    });
+  }
+}
+
+const allowedFields = ['nombre', 'apellido', 'telefono', 'rol', 'colegio_id', 'estado', 'hijos'];
     const updateData = {};
 
     for (const field of allowedFields) {
