@@ -80,8 +80,7 @@ router.put('/:id', async (req, res) => {
 
     const colegioDoc = await db.collection('colegios').doc(id).get();
     if (!colegioDoc.exists) return res.status(404).json({ error: true, message: 'Colegio no encontrado' });
-
-    const allowedFields = ['nombre', 'direccion', 'telefono', 'estado', 'horarios_mapa', 'configuracion_notificaciones'];
+    const allowedFields = ['nombre', 'direccion', 'telefono', 'estado', 'horarios_mapa', 'configuracion_notificaciones', 'ubicaciones_ruta'];
     const updateData = {};
 
     for (const field of allowedFields) {
