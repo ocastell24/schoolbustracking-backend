@@ -35,7 +35,7 @@ router.post('/position', async (req, res) => {
 
     await db.collection('gps_positions').add(posicionData);
     await db.collection('buses').doc(busId).update({
-      ubicacion_actual: { latitude: parseFloat(latitude), longitude: parseFloat(longitude), speed: speed ? parseFloat(speed) : null, timestamp: timestamp || new Date().toISOString() },
+     ubicacion_actual: { latitude: parseFloat(latitude), longitude: parseFloat(longitude), speed: speed ? parseFloat(speed) : null, course: course ? parseFloat(course) : 0, timestamp: timestamp || new Date().toISOString() },
       ultima_actualizacion: new Date().toISOString()
     });
 
