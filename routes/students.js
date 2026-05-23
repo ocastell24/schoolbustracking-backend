@@ -347,4 +347,31 @@ router.post('/:id/assign-bus', /* verifyToken, */ async (req, res) => {
   }
 });
 
+
+/**
+ * DELETE /api/students/:id
+ * Eliminar alumno y sus asistencias
+ */
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const alumnoDoc = await db.collection('alumnos').doc(id).get();
+    if (!alumnoDoc.exists) return res.status(404).json({ error: true, message: 'Alumno no encontrado' });
+
+    // Borrar asistencias del alumno
+    const asistencias = await db.collection('asistencias').where('alumno_id', '==', id).get();
+    const batch = db.batch();
+    asistencias.forEach(doc => batch.delete(doc.ref));
+
+    // Borrar alumno
+    batch.delete(db.collection('alumnos').doc(id));
+    await batch.commit();
+
+    res.json({ success: true, message: 'Alumno eliminado correctamente' });
+  } catch (error) {
+    console.error('Error eliminando alumno:', error);
+    res.status(500).json({ error: true, message: 'Error al eliminar alumno' });
+  }
+});
+
 module.exports = router;
