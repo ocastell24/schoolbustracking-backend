@@ -201,6 +201,23 @@ class TraccarService {
         return; // No hay alumnos asignados a este bus
       }
 
+// Detectar ruta por hora actual
+const busDoc2 = await db.collection('buses').doc(busId).get();
+const busData = busDoc2.data();
+const colegioDoc = await db.collection('colegios').doc(busData.colegio_id).get();
+const horarios = colegioDoc.data()?.horarios_mapa;
+
+const ahora = new Date();
+const horaActual = ahora.getHours() * 60 + ahora.getMinutes();
+const timeToMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+
+let rutaActiva = 'ida';
+if (horarios?.regreso?.activo) {
+  const inicioRegreso = timeToMin(horarios.regreso.inicio);
+  const finRegreso = timeToMin(horarios.regreso.fin);
+  if (horaActual >= inicioRegreso && horaActual <= finRegreso) rutaActiva = 'regreso';
+}
+
       for (const alumnoDoc of alumnosSnapshot.docs) {
         const alumno = alumnoDoc.data();
         const alumnoId = alumnoDoc.id;
@@ -242,7 +259,8 @@ class TraccarService {
               alumnoId,
               bus.placa,
               Math.round(distance),
-              alumno.padre_id
+              alumno.padre_id,
+              rutaActiva 
             );
             this.lastProximityAlerts.set(alertKey, { distance: 500, time: now });
           }
@@ -256,7 +274,8 @@ class TraccarService {
               alumnoId,
               bus.placa,
               Math.round(distance),
-              alumno.padre_id
+              alumno.padre_id,
+              rutaActiva 
             );
             this.lastProximityAlerts.set(alertKey, { distance: 200, time: now });
           }

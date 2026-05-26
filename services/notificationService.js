@@ -181,7 +181,7 @@ class NotificationService {
   /**
    * Notificar al padre cuando bus se acerca (proximidad)
    */
-  async notifyBusProximity(alumnoId, busPlaca, distanceMeters) {
+  async notifyBusProximity(alumnoId, busPlaca, distanceMeters, padreId, rutaActiva = 'ida') {
     try {
       const alumnoDoc = await admin.firestore().collection('alumnos').doc(alumnoId).get();
 
@@ -203,8 +203,10 @@ class NotificationService {
         emoji = '🟡';
       }
 
-      const title = `${emoji} El bus se acerca`;
-      const body = `El bus ${busPlaca} está a ${distanceText} de la ubicación de ${alumno.nombre}`;
+const title = `${emoji} El bus se acerca`;
+const body = rutaActiva === 'regreso'
+  ? `El bus ${busPlaca} está a ${distanceText} del paradero de ${alumno.nombre} para dejarlo en su casa`
+  : `El bus ${busPlaca} está a ${distanceText} del paradero de ${alumno.nombre} para recogerlo`;
 
       const data = {
         type: 'bus_proximity',
