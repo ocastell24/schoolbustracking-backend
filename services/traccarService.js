@@ -208,7 +208,8 @@ class TraccarService {
       const horarios = colegioDoc.data()?.horarios_mapa;
 
       const ahora = new Date();
-      const horaActual = ahora.getHours() * 60 + ahora.getMinutes();
+      const horaLima = new Date(ahora.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+      const horaActual = horaLima.getHours() * 60 + horaLima.getMinutes();
       const timeToMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
       let rutaActiva = 'ida';
