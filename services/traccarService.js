@@ -16,7 +16,7 @@ class TraccarService {
    */
   startPolling(intervalSeconds = 10) {
     console.log(`🔄 Iniciando polling de Traccar cada ${intervalSeconds} segundos...`);
-    
+
     // Detener polling anterior si existe
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
@@ -177,8 +177,8 @@ class TraccarService {
     const Δλ = (lon2 - lon1) * Math.PI / 180;
 
     const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c; // Distancia en metros
@@ -201,22 +201,38 @@ class TraccarService {
         return; // No hay alumnos asignados a este bus
       }
 
-// Detectar ruta por hora actual
-const busDoc2 = await db.collection('buses').doc(busId).get();
-const busData = busDoc2.data();
-const colegioDoc = await db.collection('colegios').doc(busData.colegio_id).get();
-const horarios = colegioDoc.data()?.horarios_mapa;
+      // Detectar ruta por hora actual
+      const busDoc2 = await db.collection('buses').doc(busId).get();
+      const busData = busDoc2.data();
+      const colegioDoc = await db.collection('colegios').doc(busData.colegio_id).get();
+      const horarios = colegioDoc.data()?.horarios_mapa;
 
-const ahora = new Date();
-const horaActual = ahora.getHours() * 60 + ahora.getMinutes();
-const timeToMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+      const ahora = new Date();
+      const horaActual = ahora.getHours() * 60 + ahora.getMinutes();
+      const timeToMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
-let rutaActiva = 'ida';
-if (horarios?.regreso?.activo) {
-  const inicioRegreso = timeToMin(horarios.regreso.inicio);
-  const finRegreso = timeToMin(horarios.regreso.fin);
-  if (horaActual >= inicioRegreso && horaActual <= finRegreso) rutaActiva = 'regreso';
-}
+      let rutaActiva = 'ida';
+      if (horarios?.regreso?.activo) {
+        const inicioRegreso = timeToMin(horarios.regreso.inicio);
+        const finRegreso = timeToMin(horarios.regreso.fin);
+        if (horaActual >= inicioRegreso && horaActual <= finRegreso) rutaActiva = 'regreso';
+      }
+
+      // Verificar horario antes de enviar notificaciones
+      const estaEnHorario = (horarios) => {
+        if (!horarios) return true;
+        const ahora2 = new Date();
+        const dia = ahora2.getDay();
+        const horaActual2 = ahora2.getHours() * 60 + ahora2.getMinutes();
+        if (!horarios.diasActivos?.includes(dia)) return false;
+        const enIda = horarios.ida?.activo && horaActual2 >= timeToMin(horarios.ida.inicio) && horaActual2 <= timeToMin(horarios.ida.fin);
+        const enRegreso = horarios.regreso?.activo && horaActual2 >= timeToMin(horarios.regreso.inicio) && horaActual2 <= timeToMin(horarios.regreso.fin);
+        return enIda || enRegreso;
+      };
+      if (!estaEnHorario(horarios)) {
+        console.log('⏰ Fuera de horario escolar, no se envían notificaciones de proximidad');
+        return;
+      }
 
       for (const alumnoDoc of alumnosSnapshot.docs) {
         const alumno = alumnoDoc.data();
@@ -260,7 +276,7 @@ if (horarios?.regreso?.activo) {
               bus.placa,
               Math.round(distance),
               alumno.padre_id,
-              rutaActiva 
+              rutaActiva
             );
             this.lastProximityAlerts.set(alertKey, { distance: 500, time: now });
           }
@@ -275,7 +291,7 @@ if (horarios?.regreso?.activo) {
               bus.placa,
               Math.round(distance),
               alumno.padre_id,
-              rutaActiva 
+              rutaActiva
             );
             this.lastProximityAlerts.set(alertKey, { distance: 200, time: now });
           }
